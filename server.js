@@ -13,6 +13,9 @@ const appointmentRoutes = require('./src/routes/appointments');
 const clientRoutes = require('./src/routes/clients');
 const configRoutes = require('./src/routes/config');
 const financeRoutes = require('./src/routes/finance');
+const reactivationRoutes = require('./src/routes/reactivation');
+const whatsappRoutes = require('./src/routes/whatsapp');
+const messageHistoryRoutes = require('./src/routes/message-history');
 
 const app = express();
 
@@ -43,6 +46,9 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/finance', financeRoutes);
+app.use('/api/reactivation', reactivationRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/messages', messageHistoryRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

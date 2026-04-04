@@ -197,6 +197,80 @@ const initDatabase = () => {
       )
     `);
 
+    // Tabela: Regras de Reativação
+    db.run(`
+      CREATE TABLE IF NOT EXISTS reactivation_rules (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        inactive_days INTEGER DEFAULT 30,
+        recurrence_days INTEGER DEFAULT 7,
+        enabled INTEGER DEFAULT 1,
+        max_daily_sends INTEGER DEFAULT 50,
+        auto_resend_days INTEGER DEFAULT 7,
+        send_time TEXT DEFAULT '10:00',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+
+    // Tabela: Configuração WhatsApp
+    db.run(`
+      CREATE TABLE IF NOT EXISTS whatsapp_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER UNIQUE NOT NULL,
+        provider TEXT DEFAULT 'manual',
+        provider_name TEXT,
+        api_token TEXT,
+        phone_origin TEXT,
+        webhook_url TEXT,
+        is_connected INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+
+    // Tabela: Templates de Mensagens
+    db.run(`
+      CREATE TABLE IF NOT EXISTS message_templates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        template_type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        variables TEXT DEFAULT '["nome","dias","barbearia","link","ultimo_servico","barbeiro"]',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        UNIQUE(user_id, template_type)
+      )
+    `);
+
+    // Tabela: Histórico de Envios
+    db.run(`
+      CREATE TABLE IF NOT EXISTS message_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        client_id INTEGER NOT NULL,
+        template_type TEXT NOT NULL,
+        message_content TEXT,
+        recipient_phone TEXT,
+        provider TEXT,
+        status TEXT DEFAULT 'pending',
+        message_id TEXT,
+        sent_at DATETIME,
+        viewed_at DATETIME,
+        scheduled_at DATETIME,
+        error_message TEXT,
+        retry_count INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (client_id) REFERENCES clients(id)
+      )
+    `);
+
     console.log('✅ Banco de dados inicializado com sucesso');
   });
 };
