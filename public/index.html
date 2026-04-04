@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BarberOS — Sistema de Agendamento</title>
+<link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Cabinet+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ========== AUTH SCREENS ========== -->
+<div id="auth-screen" class="screen active">
+  <div class="auth-split">
+    <div class="auth-left">
+      <div class="auth-brand">
+        <div class="brand-icon">✂</div>
+        <span class="brand-name">BarberOS</span>
+      </div>
+      <div class="auth-hero">
+        <h1>Sua barbearia.<br><em>Organizada.</em></h1>
+        <p>Agendamentos, barbeiros, clientes e faturamento — tudo em um sistema feito para quem trabalha de verdade.</p>
+        <div class="auth-stats">
+          <div class="astat"><span class="astat-n">2.400+</span><span class="astat-l">Barbearias</span></div>
+          <div class="astat"><span class="astat-n">98%</span><span class="astat-l">Satisfação</span></div>
+          <div class="astat"><span class="astat-n">0 falta</span><span class="astat-l">Com lembrete auto</span></div>
+        </div>
+      </div>
+      <div class="auth-decoration">
+        <div class="deco-ring r1"></div>
+        <div class="deco-ring r2"></div>
+        <div class="deco-ring r3"></div>
+      </div>
+    </div>
+    <div class="auth-right">
+      <!-- LOGIN FORM -->
+      <div id="form-login" class="auth-form active">
+        <h2>Bem-vindo de volta</h2>
+        <p class="form-sub">Entre na sua conta para continuar</p>
+        <div class="field-group">
+          <label>E-mail</label>
+          <input type="email" id="login-email" placeholder="seu@email.com" />
+        </div>
+        <div class="field-group">
+          <label>Senha</label>
+          <input type="password" id="login-pass" placeholder="••••••••" />
+        </div>
+        <button class="btn-full" onclick="handleLogin()">Entrar</button>
+        <div class="auth-divider"><span>ou</span></div>
+        <button class="btn-full btn-outline" onclick="showForm('form-register')">Criar conta grátis</button>
+        <p class="auth-switch">Demo rápido? <a href="#" onclick="loginDemo()">Entrar como dono</a> | <a href="#" onclick="loginDemoClient()">Entrar como cliente</a></p>
+      </div>
+
+      <!-- REGISTER FORM -->
+      <div id="form-register" class="auth-form">
+        <h2>Criar sua conta</h2>
+        <p class="form-sub">14 dias grátis, sem cartão de crédito</p>
+        <div class="field-row">
+          <div class="field-group">
+            <label>Nome</label>
+            <input type="text" id="reg-name" placeholder="João Silva" />
+          </div>
+          <div class="field-group">
+            <label>Telefone</label>
+            <input type="tel" id="reg-phone" placeholder="(51) 99999-9999" />
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Nome da Barbearia</label>
+          <input type="text" id="reg-shop" placeholder="Barbearia do João" />
+        </div>
+        <div class="field-group">
+          <label>E-mail</label>
+          <input type="email" id="reg-email" placeholder="joao@barbearia.com" />
+        </div>
+        <div class="field-group">
+          <label>Senha</label>
+          <input type="password" id="reg-pass" placeholder="Mínimo 8 caracteres" />
+        </div>
+        <button class="btn-full" onclick="handleRegister()">Criar conta e receber código</button>
+        <p class="auth-switch">Já tem conta? <a href="#" onclick="showForm('form-login')">Entrar</a></p>
+      </div>
+
+      <!-- EMAIL VERIFY -->
+      <div id="form-verify" class="auth-form">
+        <div class="verify-icon">📧</div>
+        <h2>Confirme seu e-mail</h2>
+        <p class="form-sub">Enviamos um código de 6 dígitos para <strong id="verify-email-show"></strong></p>
+        <div class="code-inputs">
+          <input type="text" maxlength="1" class="code-digit" oninput="moveDigit(this,0)" />
+          <input type="text" maxlength="1" class="code-digit" oninput="moveDigit(this,1)" />
+          <input type="text" maxlength="1" class="code-digit" oninput="moveDigit(this,2)" />
+          <input type="text" maxlength="1" class="code-digit" oninput="moveDigit(this,3)" />
+          <input type="text" maxlength="1" class="code-digit" oninput="moveDigit(this,4)" />
+          <input type="text" maxlength="1" class="code-digit" oninput="moveDigit(this,5)" />
+        </div>
+        <div id="code-hint" class="code-hint"></div>
+        <button class="btn-full" onclick="verifyCode()">Verificar e entrar</button>
+        <p class="auth-switch"><a href="#" onclick="resendCode()">Reenviar código</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== OWNER DASHBOARD ========== -->
+<div id="owner-screen" class="screen">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="sb-brand">
+        <div class="brand-icon sm">✂</div>
+        <div class="sb-shop-info">
+          <span class="sb-shop-name" id="sb-shop-name">Barbearia</span>
+          <span class="sb-plan">Pro · Ativo</span>
+        </div>
+      </div>
+      <button class="sb-toggle" onclick="toggleSidebar()" title="Fechar menu">‹</button>
+    </div>
+
+    <nav class="sb-nav">
+      <button class="sb-item active" onclick="showOwnerPage('dashboard')" data-page="dashboard">
+        <span class="sb-icon">⊞</span><span class="sb-label">Dashboard</span>
+      </button>
+      <button class="sb-item" onclick="showOwnerPage('agenda')" data-page="agenda">
+        <span class="sb-icon">📅</span><span class="sb-label">Agenda</span>
+      </button>
+      <button class="sb-item" onclick="showOwnerPage('barbeiros')" data-page="barbeiros">
+        <span class="sb-icon">✂</span><span class="sb-label">Barbeiros</span>
+      </button>
+      <button class="sb-item" onclick="showOwnerPage('servicos')" data-page="servicos">
+        <span class="sb-icon">📋</span><span class="sb-label">Serviços</span>
+      </button>
+      <button class="sb-item" onclick="showOwnerPage('clientes')" data-page="clientes">
+        <span class="sb-icon">👥</span><span class="sb-label">Clientes</span>
+      </button>
+      <button class="sb-item" onclick="showOwnerPage('financeiro')" data-page="financeiro">
+        <span class="sb-icon">💰</span><span class="sb-label">Financeiro</span>
+      </button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" onclick="showOwnerPage('configuracoes')" data-page="configuracoes">
+        <span class="sb-icon">⚙</span><span class="sb-label">Configurações</span>
+      </button>
+      <button class="sb-item" onclick="showOwnerPage('identidade')" data-page="identidade">
+        <span class="sb-icon">🎨</span><span class="sb-label">Identidade Visual</span>
+      </button>
+    </nav>
+
+    <div class="sb-footer">
+      <button class="sb-item sb-logout" onclick="logout()">
+        <span class="sb-icon">↩</span><span class="sb-label">Sair</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" id="main-content">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+        <h1 class="page-title" id="page-title">Dashboard</h1>
+      </div>
+      <div class="topbar-right">
+        <div class="link-share">
+          <span class="link-label">Seu link:</span>
+          <span class="link-url" id="shop-link">barberos.app/sua-barbearia</span>
+          <button class="btn-copy" onclick="copyLink()">Copiar</button>
+        </div>
+        <div class="user-avatar" id="owner-avatar">JD</div>
+      </div>
+    </header>
+
+    <!-- PAGE: DASHBOARD -->
+    <div class="page" id="page-dashboard">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon">📅</div>
+          <div class="kpi-body">
+            <span class="kpi-label">Agendamentos hoje</span>
+            <span class="kpi-val" id="kpi-today">0</span>
+            <span class="kpi-change positive">↑ 3 vs ontem</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">💰</div>
+          <div class="kpi-body">
+            <span class="kpi-label">Receita hoje</span>
+            <span class="kpi-val" id="kpi-revenue">R$ 0</span>
+            <span class="kpi-change positive">↑ 12%</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">👥</div>
+          <div class="kpi-body">
+            <span class="kpi-label">Clientes novos</span>
+            <span class="kpi-val" id="kpi-new-clients">0</span>
+            <span class="kpi-change">este mês</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">⚡</div>
+          <div class="kpi-body">
+            <span class="kpi-label">Taxa ocupação</span>
+            <span class="kpi-val" id="kpi-ocupacao">0%</span>
+            <span class="kpi-change positive">↑ 5%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="dash-card">
+          <div class="card-head">
+            <h3>Agenda de Hoje</h3>
+            <button class="btn-sm" onclick="showOwnerPage('agenda')">Ver tudo</button>
+          </div>
+          <div id="dash-appointments" class="apt-list"></div>
+        </div>
+        <div class="dash-card">
+          <div class="card-head">
+            <h3>Barbeiros</h3>
+            <button class="btn-sm" onclick="showOwnerPage('barbeiros')">Gerenciar</button>
+          </div>
+          <div id="dash-barbers" class="barber-list-mini"></div>
+        </div>
+      </div>
+
+      <div class="dash-card" style="margin-top:1.5rem">
+        <div class="card-head">
+          <h3>Faturamento da Semana</h3>
+        </div>
+        <div class="chart-bar" id="week-chart"></div>
+      </div>
+    </div>
+
+    <!-- PAGE: AGENDA -->
+    <div class="page hidden" id="page-agenda">
+      <div class="agenda-toolbar">
+        <div class="date-nav">
+          <button class="btn-icon" onclick="changeDate(-1)">‹</button>
+          <span class="current-date" id="agenda-date">Hoje</span>
+          <button class="btn-icon" onclick="changeDate(1)">›</button>
+          <button class="btn-sm" onclick="goToday()">Hoje</button>
+        </div>
+        <div class="toolbar-right">
+          <select id="agenda-filter-barber" onchange="renderAgenda()">
+            <option value="">Todos os barbeiros</option>
+          </select>
+          <button class="btn-primary" onclick="openNewAppointment()">+ Novo agendamento</button>
+        </div>
+      </div>
+      <div class="agenda-view" id="agenda-view"></div>
+    </div>
+
+    <!-- PAGE: BARBEIROS -->
+    <div class="page hidden" id="page-barbeiros">
+      <div class="page-toolbar">
+        <div></div>
+        <button class="btn-primary" onclick="openBarberModal()">+ Adicionar barbeiro</button>
+      </div>
+      <div class="barbers-grid" id="barbers-grid"></div>
+    </div>
+
+    <!-- PAGE: SERVIÇOS -->
+    <div class="page hidden" id="page-servicos">
+      <div class="page-toolbar">
+        <div></div>
+        <button class="btn-primary" onclick="openServiceModal()">+ Novo serviço</button>
+      </div>
+      <div class="services-table-wrap">
+        <table class="data-table" id="services-table">
+          <thead>
+            <tr><th>Serviço</th><th>Duração</th><th>Preço</th><th>Barbeiros</th><th>Ações</th></tr>
+          </thead>
+          <tbody id="services-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAGE: CLIENTES -->
+    <div class="page hidden" id="page-clientes">
+      <div class="page-toolbar">
+        <input type="search" id="client-search" placeholder="Buscar cliente..." oninput="filterClients()" />
+        <button class="btn-primary" onclick="openClientModal()">+ Novo cliente</button>
+      </div>
+      <div class="clients-table-wrap">
+        <table class="data-table" id="clients-table">
+          <thead>
+            <tr><th>Nome</th><th>Telefone</th><th>Último corte</th><th>Total visitas</th><th>Gasto total</th><th>Ações</th></tr>
+          </thead>
+          <tbody id="clients-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAGE: FINANCEIRO -->
+    <div class="page hidden" id="page-financeiro">
+      <div class="fin-period">
+        <button class="period-btn active" onclick="setPeriod('week',this)">Semana</button>
+        <button class="period-btn" onclick="setPeriod('month',this)">Mês</button>
+        <button class="period-btn" onclick="setPeriod('year',this)">Ano</button>
+      </div>
+      <div class="fin-kpis" id="fin-kpis"></div>
+      <div class="fin-grid">
+        <div class="dash-card">
+          <div class="card-head"><h3>Faturamento por Barbeiro</h3></div>
+          <div id="fin-barber-chart"></div>
+        </div>
+        <div class="dash-card">
+          <div class="card-head"><h3>Serviços mais vendidos</h3></div>
+          <div id="fin-services-chart"></div>
+        </div>
+      </div>
+      <div class="dash-card" style="margin-top:1.5rem">
+        <div class="card-head"><h3>Histórico de transações</h3></div>
+        <table class="data-table">
+          <thead><tr><th>Data</th><th>Cliente</th><th>Serviço</th><th>Barbeiro</th><th>Valor</th><th>Status</th></tr></thead>
+          <tbody id="fin-transactions"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAGE: CONFIGURAÇÕES -->
+    <div class="page hidden" id="page-configuracoes">
+      <div class="settings-layout">
+        <div class="settings-card">
+          <h3>Dados da Barbearia</h3>
+          <div class="field-group">
+            <label>Nome da barbearia</label>
+            <input type="text" id="cfg-name" />
+          </div>
+          <div class="field-group">
+            <label>Endereço</label>
+            <input type="text" id="cfg-address" placeholder="Rua, número, bairro" />
+          </div>
+          <div class="field-group">
+            <label>Telefone de contato</label>
+            <input type="tel" id="cfg-phone" />
+          </div>
+          <div class="field-group">
+            <label>Slug da URL (link de agendamento)</label>
+            <div class="input-prefix">
+              <span>barberos.app/</span>
+              <input type="text" id="cfg-slug" />
+            </div>
+          </div>
+          <button class="btn-primary" onclick="saveConfig()">Salvar dados</button>
+        </div>
+        <div class="settings-card">
+          <h3>Horário de Funcionamento</h3>
+          <div id="hours-config" class="hours-grid"></div>
+          <button class="btn-primary" onclick="saveHours()">Salvar horários</button>
+        </div>
+        <div class="settings-card">
+          <h3>Notificações</h3>
+          <div class="toggle-list">
+            <div class="toggle-item">
+              <div><span class="tg-label">Lembrete WhatsApp (1h antes)</span><span class="tg-sub">Envia mensagem automática ao cliente</span></div>
+              <label class="toggle"><input type="checkbox" id="notif-whatsapp" checked /><span class="slider"></span></label>
+            </div>
+            <div class="toggle-item">
+              <div><span class="tg-label">Confirmação por e-mail</span><span class="tg-sub">Envio imediato após agendamento</span></div>
+              <label class="toggle"><input type="checkbox" id="notif-email" checked /><span class="slider"></span></label>
+            </div>
+            <div class="toggle-item">
+              <div><span class="tg-label">Alerta de nova reserva</span><span class="tg-sub">Notifica o dono quando chega agendamento</span></div>
+              <label class="toggle"><input type="checkbox" id="notif-owner" checked /><span class="slider"></span></label>
+            </div>
+            <div class="toggle-item">
+              <div><span class="tg-label">Lembrete 24h antes</span><span class="tg-sub">Segundo lembrete no dia anterior</span></div>
+              <label class="toggle"><input type="checkbox" id="notif-24h" /><span class="slider"></span></label>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="saveNotifs()">Salvar preferências</button>
+        </div>
+        <div class="settings-card">
+          <h3>Segurança</h3>
+          <div class="field-group">
+            <label>E-mail atual</label>
+            <input type="email" id="cfg-email" readonly />
+          </div>
+          <div class="field-group">
+            <label>Nova senha</label>
+            <input type="password" placeholder="••••••••" id="cfg-newpass" />
+          </div>
+          <div class="field-group">
+            <label>Confirmar nova senha</label>
+            <input type="password" placeholder="••••••••" id="cfg-confirmpass" />
+          </div>
+          <button class="btn-primary" onclick="changePassword()">Alterar senha</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: IDENTIDADE VISUAL -->
+    <div class="page hidden" id="page-identidade">
+      <div class="identity-layout">
+        <div class="identity-editor">
+          <div class="settings-card">
+            <h3>Cores da Marca</h3>
+            <div class="color-pickers">
+              <div class="color-pick">
+                <label>Cor principal</label>
+                <div class="color-swatch-wrap">
+                  <input type="color" id="color-primary" value="#C0392B" oninput="applyBrandColors()" />
+                  <span id="color-primary-val">#C0392B</span>
+                </div>
+              </div>
+              <div class="color-pick">
+                <label>Cor de fundo</label>
+                <div class="color-swatch-wrap">
+                  <input type="color" id="color-bg" value="#0D0D0D" oninput="applyBrandColors()" />
+                  <span id="color-bg-val">#0D0D0D</span>
+                </div>
+              </div>
+              <div class="color-pick">
+                <label>Cor do texto</label>
+                <div class="color-swatch-wrap">
+                  <input type="color" id="color-text" value="#F5F2ED" oninput="applyBrandColors()" />
+                  <span id="color-text-val">#F5F2ED</span>
+                </div>
+              </div>
+              <div class="color-pick">
+                <label>Cor do card</label>
+                <div class="color-swatch-wrap">
+                  <input type="color" id="color-card" value="#1A1A1A" oninput="applyBrandColors()" />
+                  <span id="color-card-val">#1A1A1A</span>
+                </div>
+              </div>
+            </div>
+            <div class="preset-themes">
+              <p class="preset-label">Temas prontos:</p>
+              <div class="presets">
+                <button class="preset" onclick="applyPreset('dark-red')" style="background:#0D0D0D;border:2px solid #C0392B">Dark Red</button>
+                <button class="preset" onclick="applyPreset('navy-gold')" style="background:#0A1628;border:2px solid #C9A84C">Navy Gold</button>
+                <button class="preset" onclick="applyPreset('forest')" style="background:#0F1F0F;border:2px solid #2E7D32">Forest</button>
+                <button class="preset" onclick="applyPreset('cream')" style="background:#F7F3EE;border:2px solid #2C2C2C">Cream</button>
+                <button class="preset" onclick="applyPreset('slate')" style="background:#1E2A3A;border:2px solid #64B5F6">Slate Blue</button>
+              </div>
+            </div>
+          </div>
+          <div class="settings-card">
+            <h3>Tipografia</h3>
+            <div class="field-group">
+              <label>Fonte de destaque</label>
+              <select id="font-display" onchange="applyFont()">
+                <option value="'Bebas Neue'">Bebas Neue (Forte)</option>
+                <option value="'Playfair Display'">Playfair Display (Elegante)</option>
+                <option value="'Oswald'">Oswald (Moderno)</option>
+                <option value="'Montserrat'">Montserrat (Clean)</option>
+              </select>
+            </div>
+          </div>
+          <div class="settings-card">
+            <h3>Logo e Imagem</h3>
+            <div class="logo-upload" onclick="document.getElementById('logo-input').click()">
+              <div id="logo-preview-wrap">
+                <span class="upload-icon">🖼</span>
+                <p>Clique para enviar logo</p>
+                <p class="upload-sub">PNG, JPG · até 2MB</p>
+              </div>
+              <input type="file" id="logo-input" accept="image/*" style="display:none" onchange="previewLogo(event)" />
+            </div>
+            <div class="field-group" style="margin-top:1rem">
+              <label>Mensagem de boas-vindas (tela de agendamento)</label>
+              <textarea id="cfg-welcome" rows="3" placeholder="Ex: Bem-vindo à Barbearia do João! Reserve seu horário."></textarea>
+            </div>
+          </div>
+          <button class="btn-primary btn-full-w" onclick="saveIdentity()">Salvar e publicar</button>
+        </div>
+
+        <div class="identity-preview">
+          <div class="preview-label">Preview da tela de agendamento</div>
+          <div class="booking-preview" id="booking-preview">
+            <div class="bp-header">
+              <div class="bp-logo-area" id="bp-logo-area">✂</div>
+              <h2 id="bp-shop-name">Barbearia</h2>
+              <p id="bp-welcome">Reserve seu horário</p>
+            </div>
+            <div class="bp-body">
+              <div class="bp-step-label">Escolha o serviço</div>
+              <div class="bp-services">
+                <div class="bp-svc active">Corte · 30min · R$45</div>
+                <div class="bp-svc">Barba · 20min · R$35</div>
+                <div class="bp-svc">Corte + Barba · 50min · R$70</div>
+              </div>
+              <div class="bp-step-label" style="margin-top:1rem">Escolha o barbeiro</div>
+              <div class="bp-barbers">
+                <div class="bp-barber active">
+                  <div class="bp-av">LF</div>
+                  <span>Lucas F.</span>
+                </div>
+                <div class="bp-barber">
+                  <div class="bp-av">RM</div>
+                  <span>Rafael M.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ========== CLIENT BOOKING SCREEN ========== -->
+<div id="client-screen" class="screen">
+  <div class="booking-shell">
+    <div class="booking-header" id="booking-header">
+      <div class="bk-logo" id="bk-logo">✂</div>
+      <div class="bk-shop-info">
+        <h1 id="bk-shop-name">Barbearia</h1>
+        <p id="bk-shop-sub">Reserve seu horário</p>
+      </div>
+    </div>
+
+    <div class="booking-steps">
+      <div class="step-indicator" id="step-indicator">
+        <div class="si-step active" data-step="1">1 · Serviço</div>
+        <div class="si-step" data-step="2">2 · Barbeiro</div>
+        <div class="si-step" data-step="3">3 · Horário</div>
+        <div class="si-step" data-step="4">4 · Confirmar</div>
+      </div>
+
+      <!-- STEP 1: SERVICE -->
+      <div class="booking-step active" id="bk-step-1">
+        <h2 class="step-title">Qual serviço você quer?</h2>
+        <div class="bk-services" id="bk-services-list"></div>
+        <button class="btn-next" onclick="goStep(2)" id="btn-step1">Próximo →</button>
+      </div>
+
+      <!-- STEP 2: BARBER -->
+      <div class="booking-step hidden" id="bk-step-2">
+        <h2 class="step-title">Escolha seu barbeiro</h2>
+        <div class="bk-barbers-grid" id="bk-barbers-list"></div>
+        <div class="step-nav">
+          <button class="btn-back" onclick="goStep(1)">← Voltar</button>
+          <button class="btn-next" onclick="goStep(3)" id="btn-step2">Próximo →</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: DATE & TIME -->
+      <div class="booking-step hidden" id="bk-step-3">
+        <h2 class="step-title">Quando você quer vir?</h2>
+        <div class="bk-calendar-wrap">
+          <div class="bk-calendar" id="bk-calendar"></div>
+          <div class="bk-slots-wrap">
+            <h3 class="slots-title" id="slots-title">Horários disponíveis</h3>
+            <div class="bk-slots" id="bk-slots"></div>
+          </div>
+        </div>
+        <div class="step-nav">
+          <button class="btn-back" onclick="goStep(2)">← Voltar</button>
+          <button class="btn-next" onclick="goStep(4)" id="btn-step3">Próximo →</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: CONFIRM -->
+      <div class="booking-step hidden" id="bk-step-4">
+        <h2 class="step-title">Confirmar agendamento</h2>
+        <div class="booking-summary" id="booking-summary"></div>
+        <div class="client-info-form">
+          <h3>Seus dados</h3>
+          <div class="field-row">
+            <div class="field-group">
+              <label>Nome completo</label>
+              <input type="text" id="bk-client-name" placeholder="João Silva" />
+            </div>
+            <div class="field-group">
+              <label>Telefone / WhatsApp</label>
+              <input type="tel" id="bk-client-phone" placeholder="(51) 99999-9999" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label>E-mail (para confirmação)</label>
+            <input type="email" id="bk-client-email" placeholder="joao@email.com" />
+          </div>
+          <div class="field-group">
+            <label>Observações (opcional)</label>
+            <textarea id="bk-client-obs" rows="2" placeholder="Ex: quero o degradê bem baixo..."></textarea>
+          </div>
+        </div>
+        <div class="step-nav">
+          <button class="btn-back" onclick="goStep(3)">← Voltar</button>
+          <button class="btn-confirm" onclick="confirmBooking()">Confirmar agendamento ✓</button>
+        </div>
+      </div>
+
+      <!-- SUCCESS -->
+      <div class="booking-step hidden" id="bk-step-success">
+        <div class="booking-success">
+          <div class="success-icon">✓</div>
+          <h2>Agendamento confirmado!</h2>
+          <p>Enviamos a confirmação para seu e-mail e WhatsApp.</p>
+          <div class="success-card" id="success-card"></div>
+          <button class="btn-primary" onclick="newBooking()">Fazer novo agendamento</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MODALS ========== -->
+
+<!-- APPOINTMENT MODAL -->
+<div class="modal-overlay hidden" id="modal-appointment">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="apt-modal-title">Novo Agendamento</h3>
+      <button class="modal-close" onclick="closeModal('modal-appointment')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label>Cliente</label>
+        <input type="text" id="apt-client" placeholder="Nome do cliente" list="client-datalist" />
+        <datalist id="client-datalist"></datalist>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Telefone</label>
+          <input type="tel" id="apt-phone" placeholder="(51) 99999-9999" />
+        </div>
+        <div class="field-group">
+          <label>E-mail</label>
+          <input type="email" id="apt-email" placeholder="cliente@email.com" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Serviço</label>
+          <select id="apt-service" onchange="updateAptDuration()"></select>
+        </div>
+        <div class="field-group">
+          <label>Barbeiro</label>
+          <select id="apt-barber"></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Data</label>
+          <input type="date" id="apt-date" />
+        </div>
+        <div class="field-group">
+          <label>Horário</label>
+          <input type="time" id="apt-time" />
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Observações</label>
+        <textarea id="apt-obs" rows="2" placeholder="Detalhes do corte, observações..."></textarea>
+      </div>
+      <div class="apt-preview-bar" id="apt-preview"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-outline" onclick="closeModal('modal-appointment')">Cancelar</button>
+      <button class="btn-primary" onclick="saveAppointment()">Salvar agendamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- BARBER MODAL -->
+<div class="modal-overlay hidden" id="modal-barber">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="barber-modal-title">Novo Barbeiro</h3>
+      <button class="modal-close" onclick="closeModal('modal-barber')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field-group">
+          <label>Nome completo</label>
+          <input type="text" id="barber-name" placeholder="Lucas Ferreira" />
+        </div>
+        <div class="field-group">
+          <label>Apelido / Como exibir</label>
+          <input type="text" id="barber-nick" placeholder="Lucas F." />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Telefone</label>
+          <input type="tel" id="barber-phone" placeholder="(51) 99999-9999" />
+        </div>
+        <div class="field-group">
+          <label>E-mail</label>
+          <input type="email" id="barber-email" placeholder="lucas@email.com" />
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Especialidades</label>
+        <div class="specialty-check" id="specialty-checks"></div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Comissão (%)</label>
+          <input type="number" id="barber-commission" value="40" min="0" max="100" />
+        </div>
+        <div class="field-group">
+          <label>Cor na agenda</label>
+          <input type="color" id="barber-color" value="#C0392B" />
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Dias de trabalho</label>
+        <div class="days-check" id="barber-days">
+          <label><input type="checkbox" value="1" checked /> Seg</label>
+          <label><input type="checkbox" value="2" checked /> Ter</label>
+          <label><input type="checkbox" value="3" checked /> Qua</label>
+          <label><input type="checkbox" value="4" checked /> Qui</label>
+          <label><input type="checkbox" value="5" checked /> Sex</label>
+          <label><input type="checkbox" value="6" checked /> Sáb</label>
+          <label><input type="checkbox" value="0" /> Dom</label>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Entrada</label>
+          <input type="time" id="barber-start" value="09:00" />
+        </div>
+        <div class="field-group">
+          <label>Saída</label>
+          <input type="time" id="barber-end" value="19:00" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-outline" onclick="closeModal('modal-barber')">Cancelar</button>
+      <button class="btn-primary" onclick="saveBarber()">Salvar barbeiro</button>
+    </div>
+  </div>
+</div>
+
+<!-- SERVICE MODAL -->
+<div class="modal-overlay hidden" id="modal-service">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="service-modal-title">Novo Serviço</h3>
+      <button class="modal-close" onclick="closeModal('modal-service')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label>Nome do serviço</label>
+        <input type="text" id="svc-name" placeholder="Ex: Corte + Barba" />
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Duração (minutos)</label>
+          <input type="number" id="svc-duration" value="30" min="10" step="5" />
+        </div>
+        <div class="field-group">
+          <label>Preço (R$)</label>
+          <input type="number" id="svc-price" value="45" min="0" step="5" />
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Descrição (opcional)</label>
+        <textarea id="svc-desc" rows="2" placeholder="Descreva o serviço..."></textarea>
+      </div>
+      <div class="field-group">
+        <label>Disponível para barbeiros</label>
+        <div id="svc-barbers-check" class="specialty-check"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-outline" onclick="closeModal('modal-service')">Cancelar</button>
+      <button class="btn-primary" onclick="saveService()">Salvar serviço</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENT MODAL -->
+<div class="modal-overlay hidden" id="modal-client">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Detalhes do Cliente</h3>
+      <button class="modal-close" onclick="closeModal('modal-client')">✕</button>
+    </div>
+    <div class="modal-body" id="client-modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn-outline" onclick="closeModal('modal-client')">Fechar</button>
+      <button class="btn-primary" onclick="bookForClient()">Agendar para este cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="api.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
