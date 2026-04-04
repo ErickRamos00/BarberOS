@@ -1,4 +1,4 @@
-﻿// ===== STATE =====
+// ===== STATE =====
 const DB = {
   user: null,
   shop: null,
@@ -991,9 +991,13 @@ function renderBkBarbers() {
   const eligible = svcId ? DB.barbers.filter(b=>{ const svc=DB.services.find(s=>s.id===svcId); return !svc||!svc.barbers||svc.barbers.includes(b.id); }) : DB.barbers;
   document.getElementById('bk-barbers-list').innerHTML =
     `<div class="bk-any-card ${DB.booking.barber===null?'selected':''}" onclick="selectBarber(null,this)">
-      <div class="bk-any-icon">ðŸŽ²</div>
+      <div class="bk-any-icon">🎲</div>
       <div class="bk-barber-name">Qualquer barbeiro</div>
-      <div class="bk-barber-spec">Primeiro disponÃ­vel</div>
+      <div class="bk-barber-spec">Primeiro disponível</div>
     </div>` +
     eligible.map(b=>`
       <div class="bk-barber-card ${DB.booking.barber===b.id?'selected':''}" onclick="selectBarber('${b.id}',this)" data-id="${b.id}">
+        <div class="bk-barber-name">${b.name}</div>
+      </div>`).join('');
+}
+
