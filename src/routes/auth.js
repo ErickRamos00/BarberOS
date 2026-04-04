@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { run, get } = require('../database');
+const { sendVerificationCode, verifyCode, sendWelcomeEmail } = require('../services/email');
 
 const router = express.Router();
 const SECRET_KEY = 'barber-secret-key-change-in-production';
@@ -148,6 +149,136 @@ router.post('/change-password', verifyToken, async (req, res) => {
     res.json({ message: 'Senha alterada com sucesso' });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ===== AUTENTICAÇÃO COM CÓDIGO =====
+
+// Enviar código de verificação
+router.post('/send-code', async (req, res) => {
+  try {
+    const { email, purpose = 'verificacao' } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email é obrigatório' });
+    }
+
+    // Verificar se email existe (para login)
+    if (purpose === 'login') {
+      const user = await get('SELECT id FROM users WHERE email = ?', [email]);
+      if (!user) {
+        return res.status(400).json({ error: 'Email não cadastrado' });
+      }
+    }
+
+    const result = await sendVerificationCode(email, purpose);
+    
+    if (result.success) {
+      res.json({ 
+        message: 'Código enviado com sucesso',
+        email: email,
+        expiresIn: 15 * 60 // 15 minutos em segundos
+      });
+    } else {
+      res.status(500).json({ error: 'Erro ao enviar código: ' + result.error });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Verificar código e fazer login
+router.post('/verify-code', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    
+    if (!email || !code) {
+      return res.status(400).json({ error: 'Email e código são obrigatórios' });
+    }
+
+    // Verificar código
+    const verification = verifyCode(email, code);
+    
+    if (!verification.valid) {
+      return res.status(400).json({ error: verification.message });
+    }
+
+    // Obter usuário
+    const user = await get('SELECT id, name, email, shop_name, shop_slug FROM users WHERE email = ?', [email]);
+    
+    if (!user) {
+      return res.status(400).json({ error: 'Usuário não encontrado' });
+    }
+
+    // Gerar token
+    const token = jwt.sign({ id: user.id }, SECRET_KEY, { expiresIn: '30d' });
+    
+    res.json({
+      message: 'Login bem-sucedido',
+      user: { 
+        id: user.id, 
+        email: user.email, 
+        name: user.name, 
+        shop: user.shop_name,
+        slug: user.shop_slug
+      },
+      token
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Registrar e enviar código de verificação
+router.post('/register-with-code', async (req, res) => {
+  try {
+    const { name, email, phone, shop_name, password } = req.body;
+    
+    // Validações
+    if (!name || !email || !phone || !shop_name || !password) {
+      return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+    }
+
+    // Verificar se email já existe
+    const existing = await get('SELECT id FROM users WHERE email = ?', [email]);
+    if (existing) {
+      return res.status(400).json({ error: 'Este email já está cadastrado' });
+    }
+
+    // Criar usuário
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const shop_slug = shop_name.toLowerCase().replace(/\s+/g, '-');
+    
+    await run(
+      `INSERT INTO users (name, email, phone, shop_name, shop_slug, password) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [name, email, phone, shop_name, shop_slug, hashedPassword]
+    );
+
+    // Obter user criado
+    const user = await get('SELECT id, email, name, shop_name FROM users WHERE email = ?', [email]);
+    
+    // Criar config padrão
+    await run(`INSERT INTO configs (user_id) VALUES (?)`, [user.id]);
+    await run(`INSERT INTO identity (user_id) VALUES (?)`, [user.id]);
+
+    // Enviar email de boas-vindas
+    await sendWelcomeEmail(email, name, shop_name);
+
+    // Enviar código de verificação
+    const codeResult = await sendVerificationCode(email, 'verificacao');
+
+    const token = jwt.sign({ id: user.id }, SECRET_KEY, { expiresIn: '30d' });
+    
+    res.json({
+      message: 'Usuário registrado com sucesso. Verifique seu email.',
+      user: { id: user.id, email: user.email, name: user.name, shop: user.shop_name },
+      token,
+      requiresVerification: true,
+      verificationSent: codeResult.success
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 

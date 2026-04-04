@@ -1,0 +1,115 @@
+# Testes dos Novos Endpoints de Email
+
+## 1. Enviar Código de Verificação
+POST http://localhost:3000/api/auth/send-code
+Content-Type: application/json
+
+{
+  "email": "seu-email@gmail.com",
+  "purpose": "verificacao"
+}
+
+### Response esperado:
+{
+  "message": "Código enviado com sucesso",
+  "email": "seu-email@gmail.com",
+  "expiresIn": 900
+}
+
+---
+
+## 2. Verificar Código e Login
+POST http://localhost:3000/api/auth/verify-code
+Content-Type: application/json
+
+{
+  "email": "seu-email@gmail.com",
+  "code": "123456"
+}
+
+### Response esperado:
+{
+  "message": "Login bem-sucedido",
+  "user": {
+    "id": 1,
+    "email": "seu-email@gmail.com",
+    "name": "Nome",
+    "shop": "Minha Barbearia",
+    "slug": "minha-barbearia"
+  },
+  "token": "eyJhbGc..."
+}
+
+---
+
+## 3. Registrar com Código
+POST http://localhost:3000/api/auth/register-with-code
+Content-Type: application/json
+
+{
+  "name": "João Silva",
+  "email": "joao@email.com",
+  "phone": "11999999999",
+  "shop_name": "Barbearia do João",
+  "password": "senha123456"
+}
+
+### Response esperado:
+{
+  "message": "Usuário registrado com sucesso. Verifique seu email.",
+  "user": {
+    "id": 2,
+    "email": "joao@email.com",
+    "name": "João Silva",
+    "shop": "Barbearia do João"
+  },
+  "token": "eyJhbGc...",
+  "requiresVerification": true,
+  "verificationSent": true
+}
+
+---
+
+## ⚙️ Configuração de Email
+
+### Gmail (Recomendado)
+1. Ative 2FA: https://myaccount.google.com/security
+2. Gere App Password: https://myaccount.google.com/apppasswords
+3. Cole no .env:
+   ```
+   EMAIL_PROVIDER=gmail
+   EMAIL_USER=seu-email@gmail.com
+   EMAIL_PASSWORD=sua-app-password
+   ```
+
+### Outlook
+```
+EMAIL_PROVIDER=outlook
+EMAIL_USER=seu-email@outlook.com
+EMAIL_PASSWORD=sua-senha
+```
+
+### Servidor SMTP Customizado
+```
+EMAIL_PROVIDER=smtp
+SMTP_HOST=seu-servidor.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=usuario
+SMTP_PASSWORD=senha
+```
+
+---
+
+## 📌 Modo Teste (Sem Enviar Real)
+
+Se não want configure email de verdade, os códigos são armazenados em memória:
+
+1. Endpoint `/send-code` → Gera código (armazenado em memória, não envia email)
+2. Endpoint `/verify-code` → Verifica se o código é válido
+
+Para desenvolvimento, você pode:
+- Chamar `/send-code` e obter o código
+- Usar esse código em `/verify-code`
+
+Os códigos expiram em 15 minutos automaticamente.
