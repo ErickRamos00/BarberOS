@@ -8,7 +8,7 @@ const DB = {
   clients: [],
   identity: {
     primary: '#C0392B', bg: '#0D0D0D', text: '#F5F2ED', card: '#161616',
-    fontDisplay: "'Bebas Neue'", welcome: 'Reserve seu horÃ¡rio'
+    fontDisplay: "'Bebas Neue'", welcome: 'Reserve seu horário'
   },
   hours: {
     0: { open: false, start: '09:00', end: '19:00' },
@@ -27,23 +27,24 @@ const DB = {
   selectedClient: null,
   agenda: { date: new Date() },
   booking: { service: null, barber: null, date: null, time: null },
-  bookingCalendar: { year: new Date().getFullYear(), month: new Date().getMonth() }
+  bookingCalendar: { year: new Date().getFullYear(), month: new Date().getMonth() },
+  isPublic: false
 };
 
 // ===== SEED DATA =====
 function seedData() {
   DB.barbers = [
-    { id: 'b1', name: 'Lucas Ferreira', nick: 'Lucas F.', phone: '(51) 99111-2233', email: 'lucas@barber.com', color: '#C0392B', commission: 40, days: [1,2,3,4,5,6], start: '09:00', end: '19:00', specialties: ['DegradÃª', 'Navalhado', 'Barba'] },
-    { id: 'b2', name: 'Rafael Matos', nick: 'Rafael M.', phone: '(51) 99444-5566', email: 'rafael@barber.com', color: '#2980B9', commission: 40, days: [1,2,3,4,5,6], start: '10:00', end: '20:00', specialties: ['Corte Social', 'Tesoura', 'PigmentaÃ§Ã£o'] },
+    { id: 'b1', name: 'Lucas Ferreira', nick: 'Lucas F.', phone: '(51) 99111-2233', email: 'lucas@barber.com', color: '#C0392B', commission: 40, days: [1,2,3,4,5,6], start: '09:00', end: '19:00', specialties: ['Degradê', 'Navalhado', 'Barba'] },
+    { id: 'b2', name: 'Rafael Matos', nick: 'Rafael M.', phone: '(51) 99444-5566', email: 'rafael@barber.com', color: '#2980B9', commission: 40, days: [1,2,3,4,5,6], start: '10:00', end: '20:00', specialties: ['Corte Social', 'Tesoura', 'Pigmentação'] },
     { id: 'b3', name: 'Diego Costa', nick: 'Diego C.', phone: '(51) 99777-8899', email: 'diego@barber.com', color: '#27AE60', commission: 35, days: [2,3,4,5,6], start: '09:00', end: '18:00', specialties: ['Kids', 'Barba', 'Sobrancelha'] },
   ];
   DB.services = [
-    { id: 's1', name: 'Corte Simples', duration: 30, price: 45, desc: 'Corte tradicional na tesoura ou mÃ¡quina', barbers: ['b1','b2','b3'] },
-    { id: 's2', name: 'DegradÃª / Fade', duration: 40, price: 55, desc: 'DegradÃª com acabamento perfeito', barbers: ['b1','b2'] },
+    { id: 's1', name: 'Corte Simples', duration: 30, price: 45, desc: 'Corte tradicional na tesoura ou máquina', barbers: ['b1','b2','b3'] },
+    { id: 's2', name: 'Degradê / Fade', duration: 40, price: 55, desc: 'Degradê com acabamento perfeito', barbers: ['b1','b2'] },
     { id: 's3', name: 'Barba', duration: 25, price: 35, desc: 'Modelagem de barba com navalha e toalha quente', barbers: ['b1','b3'] },
     { id: 's4', name: 'Corte + Barba', duration: 55, price: 75, desc: 'Combo completo corte e barba', barbers: ['b1'] },
-    { id: 's5', name: 'PigmentaÃ§Ã£o', duration: 30, price: 40, desc: 'PigmentaÃ§Ã£o para disfarÃ§ar falhas', barbers: ['b2'] },
-    { id: 's6', name: 'Corte Kids', duration: 30, price: 38, desc: 'Corte para crianÃ§as atÃ© 10 anos', barbers: ['b3'] },
+    { id: 's5', name: 'Pigmentação', duration: 30, price: 40, desc: 'Pigmentação para disfarçar falhas', barbers: ['b2'] },
+    { id: 's6', name: 'Corte Kids', duration: 30, price: 38, desc: 'Corte para crianças até 10 anos', barbers: ['b3'] },
   ];
   const today = new Date();
   const fmt = d => d.toISOString().split('T')[0];
@@ -52,20 +53,20 @@ function seedData() {
 
   DB.appointments = [
     { id: 'a1', client: 'Marcos Silva', phone: '(51) 99001-1111', email: 'marcos@email.com', service: 's1', barber: 'b1', date: fmt(today), time: '09:00', status: 'done', obs: '' },
-    { id: 'a2', client: 'JoÃ£o Felipe', phone: '(51) 99002-2222', email: 'joao@email.com', service: 's2', barber: 'b2', date: fmt(today), time: '10:00', status: 'confirmed', obs: 'DegradÃª bem baixo' },
+    { id: 'a2', client: 'João Felipe', phone: '(51) 99002-2222', email: 'joao@email.com', service: 's2', barber: 'b2', date: fmt(today), time: '10:00', status: 'confirmed', obs: 'Degradê bem baixo' },
     { id: 'a3', client: 'Pedro Oliveira', phone: '(51) 99003-3333', email: 'pedro@email.com', service: 's3', barber: 'b1', date: fmt(today), time: '11:30', status: 'confirmed', obs: '' },
     { id: 'a4', client: 'Ricardo Costa', phone: '(51) 99004-4444', email: 'ricardo@email.com', service: 's4', barber: 'b2', date: fmt(today), time: '14:00', status: 'pending', obs: '' },
-    { id: 'a5', client: 'AndrÃ© Lima', phone: '(51) 99005-5555', email: 'andre@email.com', service: 's1', barber: 'b3', date: fmt(today), time: '15:00', status: 'confirmed', obs: '' },
+    { id: 'a5', client: 'André Lima', phone: '(51) 99005-5555', email: 'andre@email.com', service: 's1', barber: 'b3', date: fmt(today), time: '15:00', status: 'confirmed', obs: '' },
     { id: 'a6', client: 'Bruno Souza', phone: '(51) 99006-6666', email: 'bruno@email.com', service: 's2', barber: 'b1', date: fmt(today), time: '16:30', status: 'pending', obs: '' },
     { id: 'a7', client: 'Carlos Mendes', phone: '(51) 99007-7777', email: 'carlos@email.com', service: 's5', barber: 'b2', date: fmt(yesterday), time: '10:00', status: 'done', obs: '' },
     { id: 'a8', client: 'Felipe Gomes', phone: '(51) 99008-8888', email: 'felipe@email.com', service: 's6', barber: 'b3', date: fmt(tomorrow), time: '09:00', status: 'confirmed', obs: 'Kid, 7 anos' },
   ];
   DB.clients = [
     { id: 'c1', name: 'Marcos Silva', phone: '(51) 99001-1111', email: 'marcos@email.com', since: '2024-03-10' },
-    { id: 'c2', name: 'JoÃ£o Felipe', phone: '(51) 99002-2222', email: 'joao@email.com', since: '2024-01-22' },
+    { id: 'c2', name: 'João Felipe', phone: '(51) 99002-2222', email: 'joao@email.com', since: '2024-01-22' },
     { id: 'c3', name: 'Pedro Oliveira', phone: '(51) 99003-3333', email: 'pedro@email.com', since: '2023-11-05' },
     { id: 'c4', name: 'Ricardo Costa', phone: '(51) 99004-4444', email: 'ricardo@email.com', since: '2024-05-18' },
-    { id: 'c5', name: 'AndrÃ© Lima', phone: '(51) 99005-5555', email: 'andre@email.com', since: '2024-02-28' },
+    { id: 'c5', name: 'André Lima', phone: '(51) 99005-5555', email: 'andre@email.com', since: '2024-02-28' },
     { id: 'c6', name: 'Bruno Souza', phone: '(51) 99006-6666', email: 'bruno@email.com', since: '2024-06-01' },
   ];
 }
@@ -77,19 +78,41 @@ function showForm(id) {
 }
 
 async function handleLogin() {
-  const email = document.getElementById('login-email').value.trim();
+  const email = document.getElementById('login-email').value;
   const pass = document.getElementById('login-pass').value;
-  if (!email || !pass) return toast('Preencha e-mail e senha', 'error');
+  if (!email || !pass) return toast('Preencha todos os campos', 'error');
   
   try {
-    const result = await apiLogin(email, pass);
-    DB.user = result.user || { email, name: email.split('@')[0], role: 'owner' };
-    DB.shop = result.shop || { name: 'Minha Barbearia', slug: 'minha-barbearia' };
+    const res = await apiLogin(email, pass);
+    DB.user = res.user;
+    DB.shop = res.shop; // Garantir que a loja venha do login
+    localStorage.setItem('token', res.token);
+    
+    toast('✓ Bem-vindo de volta!', 'success');
     await loadUserData();
-    toast('âœ“ Login realizado!', 'success');
-    setTimeout(() => enterOwner(), 500);
+    enterOwner();
   } catch (err) {
-    toast(`âœ— Erro: ${err.message}`, 'error');
+    toast(err.message, 'error');
+  }
+}
+
+async function handleBarberLogin() {
+  const email = document.getElementById('barber-login-email').value;
+  const code = document.getElementById('barber-login-code').value;
+  
+  if (!email || !code) return toast('Preencha e-mail e código', 'error');
+  
+  try {
+    const res = await apiBarberLogin(email, code);
+    DB.user = res.user;
+    DB.shop = res.shop; // Garantir que a loja venha do login
+    localStorage.setItem('token', res.token);
+    
+    toast('✓ Bem-vindo à sua agenda!', 'success');
+    await loadUserData();
+    enterBarber();
+  } catch (err) {
+    toast(err.message, 'error');
   }
 }
 
@@ -99,10 +122,10 @@ async function loginDemo() {
     DB.user = result.user || { email: 'demo@barberos.app', name: 'Demo Dono', role: 'owner' };
     DB.shop = result.shop || { name: 'Barbearia Demo', slug: 'barbearia-demo' };
     await loadUserData();
-    toast('âœ“ Demo login!', 'success');
-    setTimeout(() => enterOwner(), 500);
+    toast('✓ Bem-vindo de volta!', 'success');
+    enterOwner();
   } catch (err) {
-    toast(`âœ— Erro: ${err.message}`, 'error');
+    toast(err.message, 'error');
   }
 }
 
@@ -121,25 +144,25 @@ function handleRegister() {
   if (!name || !email || !shop || !pass) return toast('Preencha todos os campos', 'error');
   if (pass.length < 8) return toast('Senha deve ter ao menos 8 caracteres', 'error');
 
-  // Para versÃ£o de demo, usar seed data
+  // Para versão de demo, usar seed data
   DB.pendingEmail = email;
   DB.user = { email, name, role: 'owner' };
   DB.shop = { name: shop, slug: shop.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') };
 
   DB.pendingVerifyCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-  simulateSendEmail(email, 'CÃ³digo de verificaÃ§Ã£o BarberOS', `
+  simulateSendEmail(email, 'Código de verificação BarberOS', `
     <h2>Bem-vindo ao BarberOS!</h2>
-    <p>Seu cÃ³digo de verificaÃ§Ã£o Ã©:</p>
+    <p>Seu código de verificação é:</p>
     <h1 style="font-size:2rem;letter-spacing:8px;color:#C0392B">${DB.pendingVerifyCode}</h1>
-    <p>Este cÃ³digo expira em 10 minutos.</p>
+    <p>Este código expira em 10 minutos.</p>
   `);
 
   document.getElementById('verify-email-show').textContent = email;
   showForm('form-verify');
-  toast(`âœ‰ CÃ³digo enviado para ${email}`, 'success');
+  toast(`✉ Código enviado para ${email}`, 'success');
   setTimeout(() => {
-    document.getElementById('code-hint').textContent = `(Demo: cÃ³digo Ã© ${DB.pendingVerifyCode})`;
+    document.getElementById('code-hint').textContent = `(Demo: código é ${DB.pendingVerifyCode})`;
   }, 500);
 }
 
@@ -154,22 +177,22 @@ function moveDigit(el, idx) {
 
 function verifyCode() {
   const digits = [...document.querySelectorAll('.code-digit')].map(d => d.value).join('');
-  if (digits.length < 6) return toast('Digite os 6 dÃ­gitos', 'error');
+  if (digits.length < 6) return toast('Digite os 6 dígitos', 'error');
   if (digits === DB.pendingVerifyCode) {
     seedData();
     toast('âœ“ E-mail verificado com sucesso!', 'success');
     setTimeout(enterOwner, 600);
   } else {
-    toast('CÃ³digo incorreto. Verifique seu e-mail.', 'error');
-    document.getElementById('code-hint').textContent = `CÃ³digo incorreto. (Demo: ${DB.pendingVerifyCode})`;
+    toast('Código incorreto. Verifique seu e-mail.', 'error');
+    document.getElementById('code-hint').textContent = `Código incorreto. (Demo: ${DB.pendingVerifyCode})`;
   }
 }
 
 function resendCode() {
   DB.pendingVerifyCode = Math.floor(100000 + Math.random() * 900000).toString();
-  simulateSendEmail(DB.pendingEmail, 'Novo cÃ³digo de verificaÃ§Ã£o', `Seu novo cÃ³digo: ${DB.pendingVerifyCode}`);
-  toast('Novo cÃ³digo enviado!', 'success');
-  document.getElementById('code-hint').textContent = `(Demo: novo cÃ³digo Ã© ${DB.pendingVerifyCode})`;
+  simulateSendEmail(DB.pendingEmail, 'Novo código de verificação', `Seu novo código: ${DB.pendingVerifyCode}`);
+  toast('Novo código enviado!', 'success');
+  document.getElementById('code-hint').textContent = `(Demo: novo código é ${DB.pendingVerifyCode})`;
 }
 
 function simulateSendEmail(to, subject, body) {
@@ -211,10 +234,22 @@ async function loadUserData() {
       DB.appointments = [];
     }
     
-    // Carregar configuraÃ§Ãµes
+    // Carregar configurações
     try {
       const cfg = await apiGetConfig();
-      if (cfg.hours_config) DB.hours = cfg.hours_config;
+      if (cfg.hours_config) {
+        // Fazer merge seguro para garantir que todos os 7 dias existem
+        const defaultHours = {
+          0: { open: false, start: '09:00', end: '19:00' },
+          1: { open: true,  start: '09:00', end: '19:00' },
+          2: { open: true,  start: '09:00', end: '19:00' },
+          3: { open: true,  start: '09:00', end: '19:00' },
+          4: { open: true,  start: '09:00', end: '19:00' },
+          5: { open: true,  start: '09:00', end: '19:00' },
+          6: { open: true,  start: '09:00', end: '17:00' },
+        };
+        DB.hours = { ...defaultHours, ...cfg.hours_config };
+      }
     } catch (e) {
       console.warn('Erro ao carregar config:', e);
     }
@@ -226,22 +261,75 @@ async function loadUserData() {
     } catch (e) {
       console.warn('Erro ao carregar identidade:', e);
     }
+
+    // Carregar dados do perfil (Eu)
+    const userData = await apiGetUser();
+    if (!userData || !userData.user) throw new Error('Falha ao obter perfil do usuário');
+    
+    DB.user = userData.user;
+    DB.shop = userData.shop || DB.shop;
+    
+    if (!DB.shop) throw new Error('Dados da barbearia não encontrados');
   } catch (err) {
-    console.error('Erro ao carregar dados do usuÃ¡rio:', err);
-    // Se falhar, usar dados de seed como fallback
+    console.error('Erro ao carregar dados do usuário:', err);
     seedData();
   }
 }
 
-function enterOwner() {
+function enterBarber() {
+  if (!DB.user || !DB.shop) {
+    console.warn('Dados faltando no enterBarber');
+    return;
+  }
+  document.body.classList.add('role-barber');
+  // Esconder itens administrativos para o barbeiro
+  const hideItems = ['barbeiros', 'servicos', 'financeiro', 'identidade', 'configuracoes'];
+  document.querySelectorAll('.sb-item').forEach(el => {
+    if (hideItems.includes(el.getAttribute('data-page'))) {
+      el.style.display = 'none';
+    } else {
+      el.style.display = 'flex';
+    }
+  });
+  
   showScreen('owner-screen');
-  const initials = (DB.user.name || 'JD').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-  document.getElementById('owner-avatar').textContent = initials;
-  document.getElementById('sb-shop-name').textContent = DB.shop.name;
-  document.getElementById('shop-link').textContent = `barberos.app/${DB.shop.slug}`;
-  document.getElementById('cfg-name').value = DB.shop.name;
-  document.getElementById('cfg-slug').value = DB.shop.slug;
-  document.getElementById('cfg-email').value = DB.user.email || '';
+  nav('agenda');
+  
+  // Atualizar avatar e info
+  const name = DB.user.name || 'Barbeiro';
+  const initialsText = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const avatarEl = document.getElementById('owner-avatar');
+  if (avatarEl) avatarEl.textContent = initialsText;
+  
+  const shopNameEl = document.getElementById('sb-shop-name');
+  if (shopNameEl) shopNameEl.textContent = DB.shop.name || 'BarberOS';
+}
+
+function enterOwner() {
+  if (!DB.user || !DB.shop) {
+    console.warn('Dados de usuário/loja faltando no enterOwner');
+    return;
+  }
+  showScreen('owner-screen');
+  updateShopLink();
+  applyIdentity();
+  const name = DB.user.name || 'Dono';
+  const initialsText = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const avatarEl = document.getElementById('owner-avatar');
+  if (avatarEl) avatarEl.textContent = initialsText;
+  
+  const shopNameEl = document.getElementById('sb-shop-name');
+  if (shopNameEl) shopNameEl.textContent = DB.shop.name || 'BarberOS';
+  
+  if (DB.shop.slug) {
+    const linkEl = document.getElementById('shop-link');
+    if (linkEl) linkEl.textContent = `${window.location.hostname}/s/${DB.shop.slug}`;
+  }
+  
+  if (document.getElementById('cfg-name')) document.getElementById('cfg-name').value = DB.shop.name || '';
+  if (document.getElementById('cfg-slug')) document.getElementById('cfg-slug').value = DB.shop.slug || '';
+  if (document.getElementById('cfg-email')) document.getElementById('cfg-email').value = DB.user.email || '';
+  
   buildHoursConfig();
   showOwnerPage('dashboard');
 }
@@ -276,7 +364,7 @@ function showOwnerPage(page) {
   if (pageEl) pageEl.classList.remove('hidden');
   const btn = document.querySelector(`[data-page="${page}"]`);
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Dashboard', agenda:'Agenda', barbeiros:'Barbeiros', servicos:'ServiÃ§os', clientes:'Clientes', financeiro:'Financeiro', configuracoes:'ConfiguraÃ§Ãµes', identidade:'Identidade Visual' };
+  const titles = { dashboard:'Dashboard', agenda:'Agenda', barbeiros:'Barbeiros', servicos:'Serviços', clientes:'Clientes', financeiro:'Financeiro', configuracoes:'Configurações', identidade:'Identidade Visual' };
   document.getElementById('page-title').textContent = titles[page] || page;
 
   if (page === 'dashboard') renderDashboard();
@@ -326,7 +414,7 @@ function renderDashboard() {
 }
 
 function renderWeekChart() {
-  const days = ['Dom','Seg','Ter','Qua','Qui','Sex','SÃ¡b'];
+  const days = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
   const today = new Date();
   const chart = document.getElementById('week-chart');
   const weekData = [];
@@ -365,16 +453,16 @@ function renderAgenda() {
   const view = document.getElementById('agenda-view');
   const apts = DB.appointments.filter(a=>a.date===dateStr && a.status!=='cancelled');
 
-  if (!barbers.length) { view.innerHTML = '<div class="empty-state"><div class="empty-state-icon">âœ‚</div><p>Nenhum barbeiro cadastrado</p></div>'; return; }
+  if (!barbers.length) { view.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✂</div><p>Nenhum barbeiro cadastrado</p></div>'; return; }
 
   view.innerHTML = barbers.map(b => {
     const bApts = apts.filter(a=>a.barber===b.id).sort((a,c)=>a.time.localeCompare(c.time));
     const slots = bApts.length ? bApts.map(a => {
       const svc = DB.services.find(s=>s.id===a.service);
       return `<div class="time-block" style="border-left-color:${b.color}" onclick="editAppointment('${a.id}')">
-        <div class="tb-time">${a.time} Â· ${svc?svc.duration:30}min</div>
+        <div class="tb-time">${a.time} - ${svc?svc.duration:30}min</div>
         <div class="tb-client">${a.client}</div>
-        <div class="tb-service">${svc?svc.name:'ServiÃ§o'}</div>
+        <div class="tb-service">${svc?svc.name:'Serviço'}</div>
         <div class="tb-actions">
           ${a.status!=='done'?`<button class="tb-btn confirm" onclick="event.stopPropagation();changeStatus('${a.id}','done')">âœ“ Feito</button>`:''}
           ${a.status==='pending'?`<button class="tb-btn" onclick="event.stopPropagation();changeStatus('${a.id}','confirmed')">Confirmar</button>`:''}
@@ -406,7 +494,7 @@ function statusLabel(s) { return {confirmed:'Confirmado',done:'ConcluÃ­do',can
 // ===== BARBERS =====
 function renderBarbers() {
   const grid = document.getElementById('barbers-grid');
-  if (!DB.barbers.length) { grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">âœ‚</div><p>Nenhum barbeiro cadastrado ainda. Adicione o primeiro!</p></div>`; return; }
+  if (!DB.barbers.length) { grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">✂</div><p>Nenhum barbeiro cadastrado ainda. Adicione o primeiro!</p></div>`; return; }
   const today = new Date().toISOString().split('T')[0];
   grid.innerHTML = DB.barbers.map(b => {
     const apts = DB.appointments.filter(a=>a.barber===b.id && a.status==='done');
@@ -415,7 +503,7 @@ function renderBarbers() {
     return `<div class="barber-card">
       <div class="bc-top">
         <div class="bc-av" style="background:${b.color}">${initials(b.name)}</div>
-        <div class="bc-info"><div class="bc-name">${b.name}</div><div class="bc-role">${b.commission}% comissÃ£o</div></div>
+        <div class="bc-info"><div class="bc-name">${b.name}</div><div class="bc-role">${b.commission}% comissão</div></div>
       </div>
       <div class="bc-stats">
         <div class="bc-stat"><span class="bc-stat-val">${todayApts}</span><span class="bc-stat-label">Hoje</span></div>
@@ -424,21 +512,39 @@ function renderBarbers() {
       </div>
       <div class="bc-tags">${(b.specialties||[]).map(s=>`<span class="bc-tag">${s}</span>`).join('')}</div>
       <div class="bc-actions">
-        <button class="btn-sm" onclick="openBarberModal('${b.id}')">âœŽ Editar</button>
-        <button class="btn-sm" onclick="showOwnerPage('agenda')">Ver agenda</button>
+        <button class="btn-sm" onclick="openBarberModal('${b.id}')">✎ Editar</button>
+        <button class="btn-sm" onclick="copyBarberLink('${b.id}')">🔗 Link Próprio</button>
         <button class="btn-sm" style="border-color:var(--primary);color:var(--primary)" onclick="deleteBarber('${b.id}')">Remover</button>
       </div>
     </div>`;
   }).join('');
 }
 
+function copyBarberLink(id) {
+  if (!DB.shop || !DB.shop.slug) return toast('Erro: Barbearia não identificada', 'error');
+  const url = `${window.location.origin}/s/${DB.shop.slug}?barber=${id}`;
+  navigator.clipboard.writeText(url).then(() => {
+    toast('✓ Link do barbeiro copiado para o clipboard!', 'success');
+  });
+}
+
 function openBarberModal(id=null) {
   DB.editingBarber = id;
-  const b = id ? DB.barbers.find(b=>b.id===id) : null;
+  const b = id ? DB.barbers.find(b=>String(b.id)===String(id)) : null;
   document.getElementById('barber-modal-title').textContent = b ? 'Editar Barbeiro' : 'Novo Barbeiro';
 
-  const specs = ['DegradÃª','Navalhado','Barba','Corte Social','Tesoura','PigmentaÃ§Ã£o','Kids','Sobrancelha','Hot Shave'];
-  document.getElementById('specialty-checks').innerHTML = specs.map(s => `<label><input type="checkbox" value="${s}" ${b&&b.specialties&&b.specialties.includes(s)?'checked':''}>${s}</label>`).join('');
+  // Usar serviços reais do banco de dados em vez de lista fixa
+  const specsArea = document.getElementById('specialty-checks');
+  if (DB.services && DB.services.length > 0) {
+    specsArea.innerHTML = DB.services.map(s => `
+      <label>
+        <input type="checkbox" value="${s.id}" ${b && b.specialties && b.specialties.map(String).includes(String(s.id)) ? 'checked' : ''}>
+        ${s.name}
+      </label>
+    `).join('');
+  } else {
+    specsArea.innerHTML = '<p style="color:var(--text-dim);font-size:12px;grid-column:1/-1">Nenhum serviço cadastrado. Cadastre serviços para vincular ao barbeiro.</p>';
+  }
 
   if (b) {
     document.getElementById('barber-name').value = b.name;
@@ -467,10 +573,11 @@ function openBarberModal(id=null) {
 
 function saveBarber() {
   const name = document.getElementById('barber-name').value.trim();
-  if (!name) return toast('Nome Ã© obrigatÃ³rio', 'error');
+  if (!name) return toast('Nome é obrigatório', 'error');
   const nick = document.getElementById('barber-nick').value.trim() || name.split(' ')[0];
   const days = [...document.querySelectorAll('#barber-days input:checked')].map(c=>parseInt(c.value));
-  const specialties = [...document.querySelectorAll('#specialty-checks input:checked')].map(c=>c.value);
+  // Agora pega os IDs dos serviços
+  const specialties = [...document.querySelectorAll('#specialty-checks input:checked')].map(c=>parseInt(c.value));
   const data = {
     name, nick,
     phone: document.getElementById('barber-phone').value,
@@ -485,40 +592,41 @@ function saveBarber() {
   if (DB.editingBarber) {
     // ATUALIZAR no backend
     apiUpdateBarber(DB.editingBarber, data).then(() => {
-      const idx = DB.barbers.findIndex(b=>b.id===DB.editingBarber);
+      const idx = DB.barbers.findIndex(b=>String(b.id)===String(DB.editingBarber));
       DB.barbers[idx] = { ...DB.barbers[idx], ...data };
-      toast('âœ“ Barbeiro atualizado!', 'success');
+      toast('✓ Barbeiro atualizado!', 'success');
       closeModal('modal-barber');
       renderBarbers();
       refreshBarberSelects();
-    }).catch(err => toast(`âœ— Erro: ${err.message}`, 'error'));
+    }).catch(err => toast(`✗ Erro: ${err.message}`, 'error'));
   } else {
     // CRIAR no backend
     apiCreateBarber(data).then(newBarber => {
       DB.barbers.push(newBarber);
-      toast('âœ“ Barbeiro adicionado!', 'success');
+      const msg = data.email ? '✓ Barbeiro adicionado! Código enviado por e-mail.' : '✓ Barbeiro adicionado!';
+      toast(msg, 'success');
       closeModal('modal-barber');
       renderBarbers();
       refreshBarberSelects();
-    }).catch(err => toast(`âœ— Erro: ${err.message}`, 'error'));
+    }).catch(err => toast(`✗ Erro: ${err.message}`, 'error'));
   }
 }
 
 function deleteBarber(id) {
   if (!confirm('Remover este barbeiro?')) return;
   apiDeleteBarber(id).then(() => {
-    DB.barbers = DB.barbers.filter(b=>b.id!==id);
+    DB.barbers = DB.barbers.filter(b=>String(b.id)!==String(id));
     renderBarbers();
-    toast('âœ“ Barbeiro removido', 'success');
-  }).catch(err => toast(`âœ— Erro: ${err.message}`, 'error'));
+    toast('✓ Barbeiro removido', 'success');
+  }).catch(err => toast(`✗ Erro: ${err.message}`, 'error'));
 }
 
 // ===== SERVICES =====
 function renderServices() {
   const tbody = document.getElementById('services-tbody');
-  if (!DB.services.length) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-faint)">Nenhum serviÃ§o cadastrado</td></tr>`; return; }
+  if (!DB.services.length) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-faint)">Nenhum serviço cadastrado</td></tr>`; return; }
   tbody.innerHTML = DB.services.map(s => {
-    const barberNames = (s.barbers||[]).map(bid=>{const b=DB.barbers.find(b=>b.id===bid);return b?b.nick:'?';}).join(', ');
+    const barberNames = (s.barbers||[]).map(bid=>{const b=DB.barbers.find(b=>String(b.id)===String(bid));return b?b.nick:'?';}).join(', ');
     return `<tr>
       <td><strong>${s.name}</strong><br><small style="color:var(--text-faint)">${s.desc||''}</small></td>
       <td>${s.duration}min</td>
@@ -534,9 +642,9 @@ function renderServices() {
 
 function openServiceModal(id=null) {
   DB.editingService = id;
-  const s = id ? DB.services.find(s=>s.id===id) : null;
-  document.getElementById('service-modal-title').textContent = s ? 'Editar ServiÃ§o' : 'Novo ServiÃ§o';
-  document.getElementById('svc-barbers-check').innerHTML = DB.barbers.map(b=>`<label><input type="checkbox" value="${b.id}" ${!s||(s.barbers&&s.barbers.includes(b.id))?'checked':''}>${b.nick}</label>`).join('');
+  const s = id ? DB.services.find(s=>String(s.id)===String(id)) : null;
+  document.getElementById('service-modal-title').textContent = s ? 'Editar Serviço' : 'Novo Serviço';
+  document.getElementById('svc-barbers-check').innerHTML = DB.barbers.map(b=>`<label><input type="checkbox" value="${b.id}" ${!s||(s.barbers&&s.barbers.map(String).includes(String(b.id)))?'checked':''}>${b.nick}</label>`).join('');
   if (s) {
     document.getElementById('svc-name').value = s.name;
     document.getElementById('svc-duration').value = s.duration;
@@ -553,7 +661,7 @@ function openServiceModal(id=null) {
 
 function saveService() {
   const name = document.getElementById('svc-name').value.trim();
-  if (!name) return toast('Nome do serviÃ§o Ã© obrigatÃ³rio', 'error');
+  if (!name) return toast('Nome do serviço é obrigatório', 'error');
   const barbers = [...document.querySelectorAll('#svc-barbers-check input:checked')].map(c=>c.value);
   const data = {
     name,
@@ -565,29 +673,29 @@ function saveService() {
   
   if (DB.editingService) {
     apiUpdateService(DB.editingService, data).then(() => {
-      const idx = DB.services.findIndex(s=>s.id===DB.editingService);
+      const idx = DB.services.findIndex(s=>String(s.id)===String(DB.editingService));
       DB.services[idx] = { ...DB.services[idx], ...data };
-      toast('âœ“ ServiÃ§o atualizado!', 'success');
+      toast('✓ Serviço atualizado!', 'success');
       closeModal('modal-service');
       renderServices();
-    }).catch(err => toast(`âœ— Erro: ${err.message}`, 'error'));
+    }).catch(err => toast(`✗ Erro: ${err.message}`, 'error'));
   } else {
     apiCreateService(data).then(newService => {
       DB.services.push(newService);
-      toast('âœ“ ServiÃ§o adicionado!', 'success');
+      toast('✓ Serviço adicionado!', 'success');
       closeModal('modal-service');
       renderServices();
-    }).catch(err => toast(`âœ— Erro: ${err.message}`, 'error'));
+    }).catch(err => toast(`✗ Erro: ${err.message}`, 'error'));
   }
 }
 
 function deleteService(id) {
-  if (!confirm('Remover este serviÃ§o?')) return;
+  if (!confirm('Remover este serviço?')) return;
   apiDeleteService(id).then(() => {
-    DB.services = DB.services.filter(s=>s.id!==id);
+    DB.services = DB.services.filter(s=>String(s.id)!==String(id));
     renderServices();
-    toast('âœ“ ServiÃ§o removido', 'success');
-  }).catch(err => toast(`âœ— Erro: ${err.message}`, 'error'));
+    toast('✓ Serviço removido', 'success');
+  }).catch(err => toast(`✗ Erro: ${err.message}`, 'error'));
 }
 
 // ===== CLIENTS =====
@@ -598,8 +706,8 @@ function renderClients(filter='') {
   tbody.innerHTML = clients.map(c => {
     const apts = DB.appointments.filter(a=>a.client===c.name && a.status!=='cancelled');
     const lastApt = apts.sort((a,b)=>b.date.localeCompare(a.date))[0];
-    const total = apts.filter(a=>a.status==='done').reduce((s,a)=>{const svc=DB.services.find(sv=>sv.id===a.service);return s+(svc?svc.price:0);},0);
-    const since = lastApt ? new Date(lastApt.date).toLocaleDateString('pt-BR') : 'â€”';
+    const total = apts.filter(a=>a.status==='done').reduce((s,a)=>{const svc=DB.services.find(sv=>String(sv.id)===String(a.service));return s+(svc?svc.price:0);},0);
+    const since = lastApt ? new Date(lastApt.date).toLocaleDateString('pt-BR') : '—';
     return `<tr>
       <td><div style="display:flex;align-items:center;gap:.6rem"><div style="width:28px;height:28px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:700;color:white;flex-shrink:0">${initials(c.name)}</div><strong>${c.name}</strong></div></td>
       <td>${c.phone}</td>
@@ -614,30 +722,88 @@ function renderClients(filter='') {
 function filterClients() { renderClients(document.getElementById('client-search').value.toLowerCase()); }
 
 function viewClient(id) {
-  const c = DB.clients.find(c=>c.id===id);
+  const c = DB.clients.find(c=>String(c.id)===String(id));
   if (!c) return;
   DB.selectedClient = c;
   const apts = DB.appointments.filter(a=>a.client===c.name&&a.status!=='cancelled');
-  const total = apts.filter(a=>a.status==='done').reduce((s,a)=>{const svc=DB.services.find(sv=>sv.id===a.service);return s+(svc?svc.price:0);},0);
+  const total = apts.filter(a=>a.status==='done').reduce((s,a)=>{const svc=DB.services.find(sv=>String(sv.id)===String(a.service));return s+(svc?svc.price:0);},0);
   document.getElementById('client-modal-body').innerHTML = `
     <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.5rem">
       <div style="width:52px;height:52px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:white">${initials(c.name)}</div>
-      <div><h3 style="font-size:1.1rem">${c.name}</h3><p style="color:var(--text-faint);font-size:.8rem">${c.email||'â€”'}</p></div>
+      <div><h3 style="font-size:1.1rem">${c.name}</h3><p style="color:var(--text-faint);font-size:.8rem">${c.email||'—'}</p></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;margin:1rem 0">
       <div class="kpi-card"><div class="kpi-body"><span class="kpi-label">Visitas</span><span class="kpi-val">${apts.length}</span></div></div>
       <div class="kpi-card"><div class="kpi-body"><span class="kpi-label">Gasto total</span><span class="kpi-val" style="font-size:1.2rem">R$${total}</span></div></div>
-      <div class="kpi-card"><div class="kpi-body"><span class="kpi-label">Cliente desde</span><span class="kpi-val" style="font-size:1rem">${c.since?new Date(c.since).toLocaleDateString('pt-BR'):'â€”'}</span></div></div>
+      <div class="kpi-card"><div class="kpi-body"><span class="kpi-label">Cliente desde</span><span class="kpi-val" style="font-size:1rem">${c.since?new Date(c.since).toLocaleDateString('pt-BR'):'—'}</span></div></div>
     </div>
-    <h4 style="font-size:.82rem;color:var(--text-faint);margin-bottom:.5rem">HISTÃ“RICO</h4>
-    ${apts.sort((a,b)=>b.date.localeCompare(a.date)).map(a=>{const svc=DB.services.find(s=>s.id===a.service);return `<div class="apt-item">${aptItemHTML(a)}</div>`}).join('')||'<p style="color:var(--text-faint);font-size:.85rem">Sem histÃ³rico</p>'}
+
+    <!-- AUTO-RETENTION INFO -->
+    <div style="background:var(--primary-light);border:1px solid var(--primary);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;display:flex;flex-direction:column;gap:.75rem">
+      <div style="display:flex;align-items:center;gap:.75rem">
+        <div style="font-size:1.5rem">🤖</div>
+        <div style="flex:1">
+          <h4 style="font-size:.85rem;color:var(--primary);margin-bottom:2px">Retenção Automática Ativa</h4>
+          <p style="font-size:.72rem;color:var(--text-dim)">Este cliente receberá um lembrete automático via e-mail 14 dias após cada corte finalizado.</p>
+        </div>
+      </div>
+      <button class="btn-outline" onclick="sendManualReminder(${c.id})" style="font-size:.75rem;padding:.4rem;color:var(--text-dim);border-color:var(--border)">
+        ✉️ Enviar lembrete agora (Manual)
+      </button>
+    </div>
+
+    <h4 style="font-size:.82rem;color:var(--text-faint);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:1px">HISTÓRICO</h4>
+    <div style="max-height:200px;overflow-y:auto">
+      ${apts.sort((a,b)=>b.date.localeCompare(a.date)).map(a=>{
+        const svc=DB.services.find(s=>String(s.id)===String(a.service));
+        return `<div class="apt-item" style="background:rgba(255,255,255,0.02);padding:.5rem;border-radius:4px;margin-bottom:.25rem;font-size:.85rem">
+          <div style="display:flex;justify-content:between">
+            <strong>${new Date(a.date).toLocaleDateString('pt-BR')}</strong>
+            <span style="color:var(--text-faint)">${svc?svc.name:'—'}</span>
+          </div>
+        </div>`
+      }).join('')||'<p style="color:var(--text-faint);font-size:.85rem">Sem histórico</p>'}
+    </div>
   `;
   openModal('modal-client');
+}
+
+async function saveClientRecurrence(id) {
+  const days = parseInt(document.getElementById('client-recurrence').value);
+  const c = DB.clients.find(c=>String(c.id)===String(id));
+  if (!c) return;
+
+  try {
+    const updated = await apiCall('PUT', `/clients/${id}`, { 
+      name: c.name, 
+      email: c.email, 
+      phone: c.phone, 
+      recurrence_days: days 
+    });
+    c.recurrence_days = days;
+    toast('Recorrência atualizada com sucesso!', 'success');
+  } catch (err) {
+    toast('Erro ao salvar recorrência', 'error');
+  }
+}
+
+async function sendManualReminder(id) {
+  const c = DB.clients.find(c=>String(c.id)===String(id));
+  if (!c) return;
+  if (!c.email) return toast('Cliente não possui e-mail cadastrado', 'error');
+
+  try {
+    await apiCall('POST', `/clients/${id}/send-reminder`);
+    toast('✓ Lembrete enviado por e-mail!', 'success');
+  } catch (err) {
+    toast('Erro ao enviar lembrete: ' + err.message, 'error');
+  }
 }
 
 function openClientModal() {
   toast('Para adicionar clientes, eles se cadastram ao agendar. Ou adicione um agendamento com novo nome.', 'info');
 }
+
 
 function bookForClient() {
   closeModal('modal-client');
@@ -659,10 +825,10 @@ function renderFinanceiro(period='week') {
   const commission = Math.round(revenue * 0.4);
 
   document.getElementById('fin-kpis').innerHTML = `
-    <div class="kpi-card"><div class="kpi-icon">ðŸ’°</div><div class="kpi-body"><span class="kpi-label">Faturamento total</span><span class="kpi-val">R$ ${revenue}</span><span class="kpi-change positive">â†‘ 12%</span></div></div>
-    <div class="kpi-card"><div class="kpi-icon">ðŸŽ¯</div><div class="kpi-body"><span class="kpi-label">Ticket mÃ©dio</span><span class="kpi-val">R$ ${avgTicket}</span></div></div>
-    <div class="kpi-card"><div class="kpi-icon">ðŸ“Š</div><div class="kpi-body"><span class="kpi-label">Atendimentos</span><span class="kpi-val">${apts.length}</span></div></div>
-    <div class="kpi-card"><div class="kpi-icon">ðŸ’¸</div><div class="kpi-body"><span class="kpi-label">ComissÃµes</span><span class="kpi-val">R$ ${commission}</span></div></div>
+    <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-body"><span class="kpi-label">Faturamento total</span><span class="kpi-val">R$ ${revenue}</span></div></div>
+    <div class="kpi-card"><div class="kpi-icon">🎯</div><div class="kpi-body"><span class="kpi-label">Ticket médio</span><span class="kpi-val">R$ ${avgTicket}</span></div></div>
+    <div class="kpi-card"><div class="kpi-icon">📊</div><div class="kpi-body"><span class="kpi-label">Atendimentos</span><span class="kpi-val">${apts.length}</span></div></div>
+    <div class="kpi-card"><div class="kpi-icon">💸</div><div class="kpi-body"><span class="kpi-label">Comissões</span><span class="kpi-val">R$ ${commission}</span></div></div>
   `;
 
   const barberRevenue = DB.barbers.map(b => {
@@ -751,7 +917,7 @@ function editAppointment(id) {
 function refreshBarberSelects() {
   const svcSel = document.getElementById('apt-service');
   const barberSel = document.getElementById('apt-barber');
-  svcSel.innerHTML = DB.services.map(s=>`<option value="${s.id}">${s.name} Â· ${s.duration}min Â· R$${s.price}</option>`).join('');
+  svcSel.innerHTML = DB.services.map(s=>`<option value="${s.id}">${s.name} - ${s.duration}min - R$${s.price}</option>`).join('');
   barberSel.innerHTML = `<option value="">Qualquer disponÃ­vel</option>` + DB.barbers.map(b=>`<option value="${b.id}">${b.nick}</option>`).join('');
 }
 
@@ -787,8 +953,8 @@ function changeAppointmentStatus(id, newStatus) {
     if (apt) apt.status = newStatus;
     renderAgenda();
     renderDashboard();
-    toast('âœ“ Status atualizado', 'success');
-  }).catch(err => toast(`âœ— Erro: ${err.message}`, 'error'));
+    toast('✓ Status atualizado', 'success');
+  }).catch(err => toast(`✗ Erro: ${err.message}`, 'error'));
 }
 
 function saveAppointment() {
@@ -801,8 +967,8 @@ function saveAppointment() {
   const barber = document.getElementById('apt-barber').value || (DB.barbers[0]&&DB.barbers[0].id) || '';
 
   if (barber) {
-    const conflict = DB.appointments.find(a=>a.barber===barber&&a.date===date&&a.time===time&&a.status!=='cancelled'&&a.id!==DB.editingAppointment);
-    if (conflict) return toast(`âš  HorÃ¡rio jÃ¡ ocupado para este barbeiro`, 'error');
+    const conflict = DB.appointments.find(a=>String(a.barber)===String(barber)&&a.date===date&&a.time===time&&a.status!=='cancelled'&&String(a.id)!==String(DB.editingAppointment));
+    if (conflict) return toast(`⚠ Horário já ocupado para este barbeiro`, 'error');
   }
 
   const data = {
@@ -815,34 +981,34 @@ function saveAppointment() {
 
   if (DB.editingAppointment) {
     apiUpdateAppointment(DB.editingAppointment, data).then(() => {
-      const idx = DB.appointments.findIndex(a=>a.id===DB.editingAppointment);
+      const idx = DB.appointments.findIndex(a=>String(a.id)===String(DB.editingAppointment));
       DB.appointments[idx] = { ...DB.appointments[idx], ...data };
-      toast('âœ“ Agendamento atualizado!', 'success');
+      toast('✓ Agendamento atualizado!', 'success');
       closeModal('modal-appointment');
       renderAgenda();
       renderDashboard();
-    }).catch(err => toast(`âœ— Erro: ${err.message}`, 'error'));
+    }).catch(err => toast(`✗ Erro: ${err.message}`, 'error'));
   } else {
     apiCreateAppointment(data).then(newApt => {
       DB.appointments.push(newApt);
-      toast('âœ“ Agendamento criado!', 'success');
+      toast('✓ Agendamento criado!', 'success');
       closeModal('modal-appointment');
       renderAgenda();
       renderDashboard();
-    }).catch(err => toast(`âœ— Erro: ${err.message}`, 'error'));
+    }).catch(err => toast(`✗ Erro: ${err.message}`, 'error'));
   }
 }
 
 // ===== SETTINGS =====
 function buildHoursConfig() {
-  const days = ['Dom','Seg','Ter','Qua','Qui','Sex','SÃ¡b'];
+  const days = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
   document.getElementById('hours-config').innerHTML = [0,1,2,3,4,5,6].map(d=>{
     const h = DB.hours[d];
     return `<div class="hour-row">
       <span class="hour-day">${days[d]}</span>
       <label class="hour-closed"><input type="checkbox" id="hopen-${d}" ${h.open?'checked':''} onchange="DB.hours[${d}].open=this.checked"> Aberto</label>
       <input type="time" id="hstart-${d}" value="${h.start}" onchange="DB.hours[${d}].start=this.value" style="width:100px" ${h.open?'':'disabled'}>
-      <span style="color:var(--text-faint);font-size:.8rem">atÃ©</span>
+      <span style="color:var(--text-faint);font-size:.8rem">até</span>
       <input type="time" id="hend-${d}" value="${h.end}" onchange="DB.hours[${d}].end=this.value" style="width:100px" ${h.open?'':'disabled'}>
     </div>`;
   }).join('');
@@ -863,7 +1029,7 @@ function saveConfig() {
   document.getElementById('bp-shop-name').textContent = DB.shop.name;
   toast('Dados salvos com sucesso!', 'success');
 }
-function saveHours() { toast('HorÃ¡rios salvos!', 'success'); }
+function saveHours() { toast('Horários salvos!', 'success'); }
 function saveNotifs() { toast('PreferÃªncias de notificaÃ§Ã£o salvas!', 'success'); }
 function changePassword() {
   const np = document.getElementById('cfg-newpass').value;
@@ -954,6 +1120,128 @@ function darken(hex) {
   return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
 }
 
+// ===== UTILITY FUNCTIONS =====
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.remove('hidden');
+  }
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
+function toast(message, type = 'info') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    `;
+    document.body.appendChild(container);
+  }
+
+  const toastEl = document.createElement('div');
+  toastEl.style.cssText = `
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    animation: slideIn 0.3s ease;
+    background-color: ${type === 'success' ? '#27AE60' : type === 'error' ? '#C0392B' : type === 'warning' ? '#E67E22' : '#2980B9'};
+  `;
+  toastEl.textContent = message;
+  container.appendChild(toastEl);
+
+  setTimeout(() => {
+    toastEl.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => toastEl.remove(), 300);
+  }, 3000);
+}
+
+function initials(name) {
+  if (!name) return '?';
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function aptItemHTML(apt) {
+  const svc = DB.services.find(s => s.id === apt.service);
+  const barber = DB.barbers.find(b => b.id === apt.barber);
+  const statusClass = {
+    'done': 'status-done',
+    'confirmed': 'status-confirmed',
+    'pending': 'status-pending',
+    'cancelled': 'status-cancelled'
+  }[apt.status] || 'status-pending';
+  
+  return `
+    <div style="display: grid; grid-template-columns: 1fr 2fr 1fr 1fr; gap: 1rem; align-items: center;">
+      <div style="font-weight: 600;">
+        <div>${apt.time}</div>
+        <div style="font-size: 0.8rem; color: var(--text-faint);">${apt.date}</div>
+      </div>
+      <div>
+        <div style="font-weight: 500;">${apt.client}</div>
+        <div style="font-size: 0.85rem; color: var(--text-dim);">
+          ${svc ? svc.name : '—'} ${barber ? '• ' + barber.nick : ''}
+        </div>
+      </div>
+      <div>
+        <span class="apt-status ${statusClass}">${apt.status ? apt.status.charAt(0).toUpperCase() + apt.status.slice(1) : 'pendente'}</span>
+      </div>
+      <div style="text-align: right;">
+        <strong style="color: var(--primary);">R$ ${svc ? svc.price : 0}</strong>
+      </div>
+    </div>
+  `;
+}
+
+// Add CSS for animations
+if (!document.getElementById('toast-styles')) {
+  const style = document.createElement('style');
+  style.id = 'toast-styles';
+  style.textContent = `
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// Modals are controlled via CSS .modal-overlay.hidden { display: none }
+// No inline display manipulation needed
+
 // ===== CLIENT BOOKING =====
 let currentStep = 1;
 
@@ -988,7 +1276,7 @@ function selectService(id, el) {
 
 function renderBkBarbers() {
   const svcId = DB.booking.service;
-  const eligible = svcId ? DB.barbers.filter(b=>{ const svc=DB.services.find(s=>s.id===svcId); return !svc||!svc.barbers||svc.barbers.includes(b.id); }) : DB.barbers;
+  const eligible = svcId ? DB.barbers.filter(b=>{ const svc=DB.services.find(s=>String(s.id)===String(svcId)); return !svc||!svc.barbers||svc.barbers.map(String).includes(String(b.id)); }) : DB.barbers;
   document.getElementById('bk-barbers-list').innerHTML =
     `<div class="bk-any-card ${DB.booking.barber===null?'selected':''}" onclick="selectBarber(null,this)">
       <div class="bk-any-icon">🎲</div>
@@ -1000,4 +1288,122 @@ function renderBkBarbers() {
         <div class="bk-barber-name">${b.name}</div>
       </div>`).join('');
 }
+
+function selectBarber(barberId, el) {
+  DB.booking.barber = barberId;
+  document.querySelectorAll('.bk-barber-card, .bk-any-card').forEach(c=>c.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+}
+
+// ===== SaaS & IDENTITY =====
+async function initSaaS() {
+  const path = window.location.pathname;
+  if (path.includes('/s/')) {
+    const slug = path.split('/s/')[1]?.split('/')[0];
+    if (slug) {
+      try {
+        const shop = await apiGetShopPublic(slug);
+        DB.shop = { id: shop.id, name: shop.name, slug: shop.slug };
+        DB.identity = { ...DB.identity, ...shop.identity };
+        DB.barbers = shop.barbers;
+        DB.services = shop.services;
+        DB.hours = shop.hours;
+        DB.isPublic = true;
+        
+        // Pre-seleção de data via URL (Recorrência)
+        const params = new URLSearchParams(window.location.search);
+        const preDate = params.get('date');
+        if (preDate && /^\d{4}-\d{2}-\d{2}$/.test(preDate)) {
+          DB.booking.date = preDate;
+          const parts = preDate.split('-').map(Number);
+          DB.bookingCalendar = { year: parts[0], month: parts[1] - 1 };
+        }
+
+        const preBarber = params.get('barber');
+        if (preBarber) {
+          DB.booking.barber = preBarber;
+        }
+
+        applyIdentity();
+        enterClient();
+        return true;
+      } catch (e) {
+        console.error('SaaS Init Error:', e);
+        toast('Barbearia não encontrada', 'error');
+      }
+    }
+  }
+  return false;
+}
+
+function applyIdentity() {
+  const root = document.documentElement;
+  const id = DB.identity;
+  
+  // Map identity fields from DB (color_*) or local (primary, bg, etc) to CSS variables
+  const primary = id.color_primary || id.primary;
+  const bg = id.color_bg || id.bg;
+  const text = id.color_text || id.text;
+  const card = id.color_card || id.card;
+  const font = id.font_display || id.fontDisplay;
+
+  if (primary) root.style.setProperty('--primary', primary);
+  if (bg) root.style.setProperty('--bg', bg);
+  if (text) root.style.setProperty('--text', text);
+  if (card) root.style.setProperty('--card', card);
+  if (font) root.style.setProperty('--font-display', font);
+  
+  if (DB.shop) {
+    const sbShop = document.getElementById('sb-shop-name');
+    if (sbShop) sbShop.textContent = DB.shop.name;
+    const bkShop = document.getElementById('bk-shop-name');
+    if (bkShop) bkShop.textContent = DB.shop.name;
+  }
+  
+  const welcome = id.welcome_message || id.welcome;
+  if (welcome) {
+    const bkSub = document.getElementById('bk-shop-sub');
+    if (bkSub) bkSub.textContent = welcome;
+  }
+}
+
+function updateShopLink() {
+  const linkEl = document.getElementById('shop-link');
+  if (linkEl && DB.shop && DB.shop.slug) {
+    const url = `${window.location.origin}/s/${DB.shop.slug}`;
+    linkEl.textContent = url.replace('http://', '').replace('https://', '');
+    linkEl.setAttribute('data-url', url);
+  }
+}
+
+function copyLink() {
+  const linkEl = document.getElementById('shop-link');
+  const url = linkEl.getAttribute('data-url') || linkEl.textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    toast('✓ Link copiado!', 'success');
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initSaaS().then(isSaaS => {
+    if (!isSaaS) {
+      if (typeof isAuthenticated === 'function' && isAuthenticated()) {
+        loadUserData().then(() => {
+          if (DB.user && DB.user.role === 'barber') {
+            enterBarber();
+          } else {
+            enterOwner();
+          }
+        }).catch(() => {
+          showScreen('auth-screen');
+          showForm('form-login');
+        });
+      } else {
+        showScreen('auth-screen');
+        showForm('form-login');
+      }
+    }
+  });
+});
+
 

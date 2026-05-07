@@ -1,732 +1,463 @@
 /**
- * Serviço de envio de emails
- * Suporta: Mailgun, SendGrid, Brevo, SMTP
- * Funciona para QUALQUER email destino (não restringe a um único email fixo)
+ * Serviço de envio de emails - BarberOS
+ * Suporta: SMTP (Gmail, Outlook, etc), Mailgun, SendGrid, Brevo, DEMO
  */
 
 const nodemailer = require('nodemailer');
 const axios = require('axios');
 
-// Código temporário armazenado em memória (substitua por banco de dados em produção)
+// Códigos de verificação em memória
 const verificationCodes = new Map();
 
-/**
- * Gera um código de verificação de 6 dígitos
- */
+// Cache do transporter SMTP
+let smtpTransporter = null;
+
 function generateCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-/**
- * Enviar com Mailgun
- */
+// ===== TEMPLATE HTML PROFISSIONAL =====
+function getEmailTemplate(title, content, footerText = '') {
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+</head>
+<body style="margin:0;padding:0;background:#0D0D0D;font-family:'Segoe UI',Roboto,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0D0D0D;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+        <!-- Header -->
+        <tr><td style="background:linear-gradient(135deg,#C0392B 0%,#96281B 100%);padding:32px 40px;border-radius:12px 12px 0 0;text-align:center;">
+          <div style="font-size:28px;margin-bottom:8px;">✂️</div>
+          <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:2px;">BarberOS</h1>
+          <p style="margin:6px 0 0;color:rgba(255,255,255,0.8);font-size:13px;">${title}</p>
+        </td></tr>
+        <!-- Body -->
+        <tr><td style="background:#161616;padding:36px 40px;border-left:1px solid rgba(255,255,255,0.08);border-right:1px solid rgba(255,255,255,0.08);">
+          ${content}
+        </td></tr>
+        <!-- Footer -->
+        <tr><td style="background:#111111;padding:24px 40px;border-radius:0 0 12px 12px;border:1px solid rgba(255,255,255,0.08);border-top:none;text-align:center;">
+          ${footerText ? `<p style="margin:0 0 8px;color:rgba(255,255,255,0.4);font-size:12px;">${footerText}</p>` : ''}
+          <p style="margin:0;color:rgba(255,255,255,0.25);font-size:11px;">&copy; ${new Date().getFullYear()} BarberOS - Sistema de Agendamento</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+// ===== PROVEDORES DE EMAIL =====
+
+async function getSmtpTransporter() {
+  if (smtpTransporter) return smtpTransporter;
+
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const port = parseInt(process.env.SMTP_PORT || '587');
+  const secure = process.env.SMTP_SECURE === 'true';
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASSWORD;
+
+  if (!user || !pass) {
+    throw new Error('SMTP_USER e SMTP_PASSWORD são obrigatórios para envio via SMTP');
+  }
+
+  smtpTransporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD,
+    },
+    tls: { rejectUnauthorized: false }
+  });
+
+  // Verificar conexão
+  try {
+    await smtpTransporter.verify();
+    console.log('✅ Conexão SMTP verificada com sucesso');
+  } catch (err) {
+    console.error('❌ Falha na verificação SMTP:', err.message);
+    smtpTransporter = null;
+    throw err;
+  }
+
+  return smtpTransporter;
+}
+
+async function sendWithSMTP(to, subject, htmlContent, textContent) {
+  try {
+    const transporter = await getSmtpTransporter();
+    const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+
+    const result = await transporter.sendMail({
+      from: `"BarberOS" <${from}>`,
+      to,
+      subject,
+      html: htmlContent,
+      text: textContent || subject
+    });
+
+    console.log(`✅ Email enviado via SMTP para ${to} (ID: ${result.messageId})`);
+    return { success: true, messageId: result.messageId };
+  } catch (error) {
+    console.error('❌ Erro SMTP:', error.message);
+    smtpTransporter = null;
+    return { success: false, error: error.message };
+  }
+}
+
 async function sendWithMailgun(to, subject, htmlContent, textContent) {
   try {
     const apiKey = process.env.MAILGUN_API_KEY;
     const domain = process.env.MAILGUN_DOMAIN;
-    const from = process.env.MAILGUN_FROM || 'noreply@barberos.app';
+    const from = process.env.MAILGUN_FROM || `BarberOS <noreply@${domain}>`;
 
-    if (!apiKey || !domain) {
+    if (!apiKey || !domain || apiKey === 'seu-api-key-aqui') {
       throw new Error('Credenciais do Mailgun não configuradas');
     }
 
+    const FormData = require('form-data') || null;
+    const params = new URLSearchParams();
+    params.append('from', from);
+    params.append('to', to);
+    params.append('subject', subject);
+    params.append('html', htmlContent);
+    if (textContent) params.append('text', textContent);
+
     const response = await axios.post(
       `https://api.mailgun.net/v3/${domain}/messages`,
+      params.toString(),
       {
-        from,
-        to,
-        subject,
-        html: htmlContent,
-        text: textContent
-      },
-      {
-        auth: {
-          username: 'api',
-          password: apiKey
-        }
+        auth: { username: 'api', password: apiKey },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
       }
     );
 
     console.log(`✅ Email enviado via Mailgun para ${to}`);
     return { success: true, messageId: response.data.id };
   } catch (error) {
-    console.error('❌ Erro Mailgun:', error.message);
+    console.error('❌ Erro Mailgun:', error.response?.data || error.message);
     return { success: false, error: error.message };
   }
 }
 
-/**
- * Enviar com SendGrid
- */
 async function sendWithSendGrid(to, subject, htmlContent) {
   try {
     const apiKey = process.env.SENDGRID_API_KEY;
-    if (!apiKey) {
+    if (!apiKey || apiKey.startsWith('SG.seu')) {
       throw new Error('API Key do SendGrid não configurada');
     }
 
-    const response = await axios.post(
-      'https://api.sendgrid.com/v3/mail/send',
-      {
-        personalizations: [{ to: [{ email: to }] }],
-        from: { email: 'noreply@barberos.app' },
-        subject,
-        content: [{ type: 'text/html', value: htmlContent }]
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`
-        }
-      }
-    );
+    await axios.post('https://api.sendgrid.com/v3/mail/send', {
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: process.env.SENDGRID_FROM || 'noreply@barberos.app', name: 'BarberOS' },
+      subject,
+      content: [{ type: 'text/html', value: htmlContent }]
+    }, {
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
+    });
 
     console.log(`✅ Email enviado via SendGrid para ${to}`);
-    return { success: true, messageId: response.headers['x-message-id'] };
+    return { success: true, messageId: `sg-${Date.now()}` };
   } catch (error) {
-    console.error('❌ Erro SendGrid:', error.message);
+    console.error('❌ Erro SendGrid:', error.response?.data || error.message);
     return { success: false, error: error.message };
   }
 }
 
-/**
- * Enviar com Brevo (Sendinblue)
- */
 async function sendWithBrevo(to, subject, htmlContent) {
   try {
     const apiKey = process.env.BREVO_API_KEY;
-    if (!apiKey) {
+    if (!apiKey || apiKey === 'seu-api-key-aqui') {
       throw new Error('API Key do Brevo não configurada');
     }
 
-    const response = await axios.post(
-      'https://api.brevo.com/v3/smtp/email',
-      {
-        to: [{ email: to }],
-        sender: {
-          name: 'BarberOS',
-          email: 'noreply@barberos.app'
-        },
-        subject,
-        htmlContent
-      },
-      {
-        headers: {
-          'api-key': apiKey
-        }
-      }
-    );
+    const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
+      to: [{ email: to }],
+      sender: { name: 'BarberOS', email: process.env.BREVO_FROM || 'noreply@barberos.app' },
+      subject,
+      htmlContent
+    }, {
+      headers: { 'api-key': apiKey, 'Content-Type': 'application/json' }
+    });
 
     console.log(`✅ Email enviado via Brevo para ${to}`);
     return { success: true, messageId: response.data.messageId };
   } catch (error) {
-    console.error('❌ Erro Brevo:', error.message);
+    console.error('❌ Erro Brevo:', error.response?.data || error.message);
     return { success: false, error: error.message };
   }
 }
 
-/**
- * Enviar com SMTP
- */
-async function sendWithSMTP(to, subject, htmlContent, textContent) {
-  try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT || 587,
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD
-      }
-    });
+async function sendWithDemo(to, subject, htmlContent) {
+  console.log(`
+╔════════════════════════════════════════╗
+║     📧 MODO DEMONSTRAÇÃO               ║
+╚════════════════════════════════════════╝
 
-    const result = await transporter.sendMail({
-      from: 'noreply@barberos.app',
-      to,
-      subject,
-      html: htmlContent,
-      text: textContent
-    });
+📨 Para: ${to}
+📝 Assunto: ${subject}
 
-    console.log(`✅ Email enviado via SMTP para ${to}`);
-    return { success: true, messageId: result.messageId };
-  } catch (error) {
-    console.error('❌ Erro SMTP:', error.message);
-    return { success: false, error: error.message };
-  }
+✅ Email simulado com sucesso!
+   (Configure SMTP no .env para enviar de verdade)
+
+💡 Para Gmail: EMAIL_PROVIDER=smtp, SMTP_HOST=smtp.gmail.com
+   SMTP_USER=seu@gmail.com, SMTP_PASSWORD=sua-app-password
+  `);
+  return { success: true, messageId: `demo-${Date.now()}` };
 }
 
-/**
- * Função principal de envio
- */
+// ===== FUNÇÃO PRINCIPAL =====
 async function sendEmail(to, subject, htmlContent, textContent = null) {
-  const provider = (process.env.EMAIL_PROVIDER || 'mailgun').toLowerCase();
+  const provider = (process.env.EMAIL_PROVIDER || 'demo').toLowerCase();
+  console.log(`📧 Enviando email via [${provider}] para ${to}`);
 
-  console.log(`📧 Enviando email via ${provider} para ${to}`);
-
-  if (provider === 'mailgun') {
-    return sendWithMailgun(to, subject, htmlContent, textContent || subject);
-  } else if (provider === 'sendgrid') {
-    return sendWithSendGrid(to, subject, htmlContent);
-  } else if (provider === 'brevo') {
-    return sendWithBrevo(to, subject, htmlContent);
-  } else if (provider === 'smtp') {
-    return sendWithSMTP(to, subject, htmlContent, textContent);
-  } else {
-    return { success: false, error: `Provider desconhecido: ${provider}` };
+  switch (provider) {
+    case 'smtp':
+    case 'gmail':
+      return sendWithSMTP(to, subject, htmlContent, textContent);
+    case 'mailgun':
+      return sendWithMailgun(to, subject, htmlContent, textContent);
+    case 'sendgrid':
+      return sendWithSendGrid(to, subject, htmlContent);
+    case 'brevo':
+      return sendWithBrevo(to, subject, htmlContent);
+    case 'demo':
+    default:
+      return sendWithDemo(to, subject, htmlContent);
   }
 }
 
-/**
- * Envia código de verificação por email
- * Funciona para QUALQUER EMAIL!
- */
+// ===== CÓDIGO DE VERIFICAÇÃO =====
 async function sendVerificationCode(email, purpose = 'verificacao') {
   try {
     const code = generateCode();
-    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutos
+    const expiresAt = Date.now() + 15 * 60 * 1000;
 
-    // Armazenar código
-    verificationCodes.set(email, {
-      code,
-      expiresAt,
-      purpose,
-      attempts: 0
+    verificationCodes.set(email.toLowerCase(), {
+      code, expiresAt, purpose, attempts: 0
     });
 
-    // Template HTML elegante
-    const htmlTemplate = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #f9f9f9; padding: 30px; }
-          .code-box { background: white; border: 2px solid #667eea; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0; }
-          .code-box .code { font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #667eea; }
-          .code-box .expires { font-size: 12px; color: #666; margin-top: 10px; }
-          .footer { background: #f0f0f0; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 8px 8px; }
-          h1 { margin: 0; }
-          p { margin: 10px 0; }
-          .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>✂️ BarberOS - Verificação de Email</h1>
-          </div>
-          
-          <div class="content">
-            <p>Olá,</p>
-            
-            <p>Você solicitou um código de verificação para ${purpose === 'login' ? 'fazer login' : 'verificar seu email'} em <strong>BarberOS</strong>.</p>
-            
-            <p>Use o código abaixo para completar o processo (válido por 15 minutos):</p>
-            
-            <div class="code-box">
-              <div class="code">${code}</div>
-              <div class="expires">Válido por 15 minutos</div>
-            </div>
-            
-            <div class="warning">
-              <strong>⚠️ Aviso de segurança:</strong> Nunca compartilhe este código. Nós nunca pediremos seu código por email.
-            </div>
-            
-            <p>Se você não solicitou este código, ignore este email.</p>
-            
-            <p>
-              Atenciosamente,<br>
-              <strong>Equipe BarberOS</strong><br>
-              <small>Sistema de Agendamento para Barbearias</small>
-            </p>
-          </div>
-          
-          <div class="footer">
-            <p>&copy; 2026 BarberOS. Todos os direitos reservados.</p>
-            <p>Este é um email automático, não responda.</p>
-          </div>
+    const content = `
+      <p style="color:#F5F2ED;font-size:15px;line-height:1.6;margin:0 0 20px;">
+        Use o código abaixo para completar sua verificação:
+      </p>
+      <div style="background:#0D0D0D;border:2px solid #C0392B;border-radius:10px;padding:24px;text-align:center;margin:24px 0;">
+        <div style="font-size:36px;font-weight:700;letter-spacing:10px;color:#C0392B;font-family:'Courier New',monospace;">
+          ${code}
         </div>
-      </body>
-      </html>
-    `;
+      </div>
+      <p style="color:rgba(245,242,237,0.5);font-size:13px;margin:16px 0 0;">
+        ⏱ Este código expira em <strong style="color:#F5F2ED;">15 minutos</strong>.<br>
+        Se você não solicitou este código, ignore este email.
+      </p>`;
 
-    const result = await sendEmail(
-      email,
-      `Seu código de verificação: ${code}`,
-      htmlTemplate,
-      `Seu código de verificação é: ${code}\nVálido por 15 minutos.`
-    );
+    const html = getEmailTemplate('Código de Verificação', content, 'Este é um email automático, não responda.');
+    const result = await sendEmail(email, `BarberOS - Código: ${code}`, html, `Seu código de verificação: ${code}`);
 
     if (result.success) {
-      return { success: true, message: 'Código enviado com sucesso' };
-    } else {
-      return { success: false, error: result.error };
+      console.log(`✅ Código ${code} enviado para ${email}`);
+      // Em modo demo, retornar código para facilitar testes
+      const isDemoMode = (process.env.EMAIL_PROVIDER || 'demo') === 'demo';
+      return { 
+        success: true, 
+        message: 'Código enviado com sucesso',
+        ...(isDemoMode && { code })
+      };
     }
-
+    return { success: false, error: result.error };
   } catch (error) {
-    console.error('❌ Erro ao enviar email:', error);
+    console.error('❌ Erro ao enviar código:', error);
     return { success: false, error: error.message };
   }
 }
 
-/**
- * Verifica se o código é válido
- */
 function verifyCode(email, code) {
-  const stored = verificationCodes.get(email);
+  const stored = verificationCodes.get(email.toLowerCase());
 
-  if (!stored) {
-    return { valid: false, message: 'Nenhum código enviado para este email' };
-  }
-
-  // Verificar expiração
+  if (!stored) return { valid: false, message: 'Nenhum código pendente para este email' };
   if (Date.now() > stored.expiresAt) {
-    verificationCodes.delete(email);
-    return { valid: false, message: 'Código expirou. Solicite um novo.' };
+    verificationCodes.delete(email.toLowerCase());
+    return { valid: false, message: 'Código expirado. Solicite um novo.' };
   }
-
-  // Limitar tentativas
   if (stored.attempts >= 5) {
-    verificationCodes.delete(email);
+    verificationCodes.delete(email.toLowerCase());
     return { valid: false, message: 'Muitas tentativas. Solicite um novo código.' };
   }
-
-  // Verificar código
   if (stored.code !== code) {
     stored.attempts++;
-    return { valid: false, message: 'Código incorreto' };
+    return { valid: false, message: `Código incorreto. ${5 - stored.attempts} tentativas restantes.` };
   }
 
-  // Código válido
-  verificationCodes.delete(email);
+  verificationCodes.delete(email.toLowerCase());
   return { valid: true, message: 'Código verificado com sucesso', purpose: stored.purpose };
 }
 
-/**
- * Envia email de confirmação de cadastro
- */
+// ===== EMAILS TRANSACIONAIS =====
 async function sendWelcomeEmail(email, name, shopName) {
-  try {
-    const htmlTemplate = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #f9f9f9; padding: 30px; }
-          .footer { background: #f0f0f0; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 8px 8px; }
-          h1 { margin: 0; }
-          .btn { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>✂️ Bem-vindo ao BarberOS!</h1>
-          </div>
-          
-          <div class="content">
-            <p>Olá <strong>${name}</strong>,</p>
-            
-            <p>Sua barbearia <strong>${shopName}</strong> foi registrada com sucesso! 🎉</p>
-            
-            <p>Você agora tem acesso completo a:</p>
-            <ul>
-              <li>📅 Agendamentos online</li>
-              <li>👥 Gerenciamento de clientes</li>
-              <li>💇 Controle de serviços</li>
-              <li>💰 Relatórios financeiros</li>
-              <li>💬 Integração WhatsApp (novo!)</li>
-              <li>🔄 Sistema de reativação de clientes</li>
-            </ul>
-            
-            <a href="http://localhost:3000" class="btn">Acessar Dashboard</a>
-            
-            <p>Se tiver qualquer dúvida, entre em contato conosco.</p>
-            
-            <p>
-              Atenciosamente,<br>
-              <strong>Equipe BarberOS</strong>
-            </p>
-          </div>
-          
-          <div class="footer">
-            <p>&copy; 2026 BarberOS. Todos os direitos reservados.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+  const content = `
+    <p style="color:#F5F2ED;font-size:16px;margin:0 0 8px;">Olá <strong>${name}</strong>! 👋</p>
+    <p style="color:rgba(245,242,237,0.7);font-size:14px;line-height:1.7;margin:0 0 24px;">
+      Sua barbearia <strong style="color:#C0392B;">${shopName}</strong> foi registrada com sucesso no BarberOS.
+    </p>
+    <div style="background:#0D0D0D;border-radius:8px;padding:20px;margin:0 0 20px;">
+      <p style="color:rgba(245,242,237,0.5);font-size:12px;text-transform:uppercase;letter-spacing:1px;margin:0 0 12px;">Próximos passos:</p>
+      <p style="color:#F5F2ED;font-size:14px;line-height:2;margin:0;">
+        ✅ Cadastre seus barbeiros<br>
+        ✅ Configure seus serviços e preços<br>
+        ✅ Compartilhe seu link de agendamento<br>
+        ✅ Personalize sua identidade visual
+      </p>
+    </div>`;
+  
+  const html = getEmailTemplate('Bem-vindo ao BarberOS!', content);
+  return sendEmail(email, `Bem-vindo ao BarberOS, ${name}!`, html);
+}
 
-    const result = await sendEmail(
-      email,
-      `Bem-vindo ao BarberOS, ${name}!`,
-      htmlTemplate
-    );
+async function sendAppointmentConfirmation(email, data) {
+  const content = `
+    <p style="color:#F5F2ED;font-size:15px;margin:0 0 20px;">
+      Seu agendamento foi confirmado! ✅
+    </p>
+    <div style="background:#0D0D0D;border-radius:8px;padding:20px;margin:0 0 20px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="color:rgba(245,242,237,0.5);font-size:13px;padding:8px 0;">Serviço</td>
+            <td style="color:#F5F2ED;font-size:14px;font-weight:600;text-align:right;padding:8px 0;">${data.service || '—'}</td></tr>
+        <tr><td style="color:rgba(245,242,237,0.5);font-size:13px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.06);">Barbeiro</td>
+            <td style="color:#F5F2ED;font-size:14px;font-weight:600;text-align:right;padding:8px 0;border-top:1px solid rgba(255,255,255,0.06);">${data.barber || 'Qualquer disponível'}</td></tr>
+        <tr><td style="color:rgba(245,242,237,0.5);font-size:13px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.06);">Data</td>
+            <td style="color:#F5F2ED;font-size:14px;font-weight:600;text-align:right;padding:8px 0;border-top:1px solid rgba(255,255,255,0.06);">${data.date || '—'}</td></tr>
+        <tr><td style="color:rgba(245,242,237,0.5);font-size:13px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.06);">Horário</td>
+            <td style="color:#C0392B;font-size:16px;font-weight:700;text-align:right;padding:8px 0;border-top:1px solid rgba(255,255,255,0.06);">${data.time || '—'}</td></tr>
+      </table>
+    </div>
+    <p style="color:rgba(245,242,237,0.5);font-size:13px;margin:0;">
+      📍 ${data.shopName || 'BarberOS'}<br>
+      Caso precise cancelar, entre em contato conosco.
+    </p>`;
 
-    return result;
+  const html = getEmailTemplate('Agendamento Confirmado', content);
+  return sendEmail(email, `Agendamento confirmado - ${data.date} às ${data.time}`, html);
+}
 
-  } catch (error) {
-    console.error('❌ Erro ao enviar email de boas-vindas:', error);
-    return { success: false, error: error.message };
-  }
+async function sendReactivationAlert(email, clientName, shopName) {
+  const content = `
+    <p style="color:#F5F2ED;font-size:15px;margin:0 0 16px;">
+      Sentimos sua falta, <strong>${clientName}</strong>! 😊
+    </p>
+    <p style="color:rgba(245,242,237,0.7);font-size:14px;line-height:1.7;margin:0 0 24px;">
+      Faz um tempo que você não nos visita na <strong style="color:#C0392B;">${shopName}</strong>. 
+      Que tal agendar um horário?
+    </p>`;
+  
+  const html = getEmailTemplate('Sentimos sua falta!', content);
+  return sendEmail(email, `${shopName} - Sentimos sua falta!`, html);
 }
 
 /**
- * Envia alerta de reativação de cliente
+ * Envia email de recorrência/retenção (sugestão de retorno)
  */
-async function sendReactivationAlert(email, clientName, shopName) {
-  try {
-    const htmlTemplate = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #f9f9f9; padding: 30px; }
-          .stat-box { background: white; padding: 15px; margin: 10px 0; border-left: 4px solid #f5576c; border-radius: 4px; }
-          .footer { background: #f0f0f0; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 8px 8px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🔄 Cliente para Reativar!</h1>
-          </div>
-          
-          <div class="content">
-            <p>Olá,</p>
-            
-            <p>Seu sistema BarberOS identificou um cliente que pode estar desengajado:</p>
-            
-            <div class="stat-box">
-              <strong>Cliente:</strong> ${clientName}<br>
-              <strong>Barbearia:</strong> ${shopName}<br>
-              <strong>Status:</strong> Sem visitas recentes
-            </div>
-            
-            <p>Envie uma mensagem de reativação agora!</p>
-            
-            <p style="margin-top: 20px;">
-              👋 Seus clientes continuam voltando com BarberOS!
-            </p>
-          </div>
-          
-          <div class="footer">
-            <p>&copy; 2026 BarberOS. Todos os direitos reservados.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+async function sendRecurrenceReminder(email, data) {
+  const { clientName, shopName, shopSlug, lastService, recommendedDate } = data;
+  const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+  const bookingUrl = `${baseUrl}/s/${shopSlug}?date=${recommendedDate}`;
 
-    const result = await sendEmail(
-      email,
-      `🔄 ${clientName} - Cliente para reativar em ${shopName}`,
-      htmlTemplate
-    );
+  const content = `
+    <p style="color:#F5F2ED;font-size:16px;margin:0 0 8px;">Olá <strong>${clientName}</strong>! 👋</p>
+    <p style="color:rgba(245,242,237,0.7);font-size:14px;line-height:1.7;margin:0 0 24px;">
+      Esperamos que tenha gostado do seu último serviço (<strong>${lastService}</strong>) na <strong style="color:#C0392B;">${shopName}</strong>.
+    </p>
+    <p style="color:rgba(245,242,237,0.7);font-size:14px;line-height:1.7;margin:0 0 24px;">
+      Para manter seu visual impecável, sugerimos que você retorne em breve. 
+      O que acha do dia <strong style="color:#F5F2ED;">${new Date(recommendedDate + 'T12:00:00').toLocaleDateString('pt-BR')}</strong>?
+    </p>
+    <div style="text-align:center;margin:32px 0;">
+      <a href="${bookingUrl}" style="background:#C0392B;color:#ffffff;padding:16px 32px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block;box-shadow:0 4px 12px rgba(192,57,43,0.3);">
+        Agendar agora ✓
+      </a>
+    </div>
+    <p style="color:rgba(245,242,237,0.5);font-size:12px;text-align:center;">
+      Se preferir outro horário, basta clicar no botão acima e escolher a melhor data.
+    </p>`;
+  
+  const html = getEmailTemplate('Sugestão de Retorno', content, shopName);
+  return sendEmail(email, `Hora de renovar o visual na ${shopName}! ✂️`, html);
+}
 
-    return result;
+// ===== TESTAR CONFIGURAÇÃO =====
+async function testEmailConfig() {
+  const provider = (process.env.EMAIL_PROVIDER || 'demo').toLowerCase();
+  const result = { provider, configured: false, details: {} };
 
-  } catch (error) {
-    console.error('❌ Erro ao enviar alerta:', error);
-    return { success: false, error: error.message };
+  if (provider === 'demo') {
+    result.configured = true;
+    result.details = { message: 'Modo demo ativo. Emails são simulados no console.' };
+  } else if (provider === 'smtp' || provider === 'gmail') {
+    result.configured = !!(process.env.SMTP_USER && process.env.SMTP_PASSWORD);
+    result.details = {
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: process.env.SMTP_PORT || '587',
+      user: process.env.SMTP_USER ? '✅ Configurado' : '❌ Faltando',
+      password: process.env.SMTP_PASSWORD ? '✅ Configurado' : '❌ Faltando'
+    };
+  } else if (provider === 'mailgun') {
+    result.configured = !!(process.env.MAILGUN_API_KEY && process.env.MAILGUN_API_KEY !== 'seu-api-key-aqui');
+    result.details = { apiKey: result.configured ? '✅ Configurado' : '❌ Faltando', domain: process.env.MAILGUN_DOMAIN || '❌ Faltando' };
+  } else if (provider === 'sendgrid') {
+    result.configured = !!(process.env.SENDGRID_API_KEY && !process.env.SENDGRID_API_KEY.startsWith('SG.seu'));
+    result.details = { apiKey: result.configured ? '✅ Configurado' : '❌ Faltando' };
+  } else if (provider === 'brevo') {
+    result.configured = !!(process.env.BREVO_API_KEY && process.env.BREVO_API_KEY !== 'seu-api-key-aqui');
+    result.details = { apiKey: result.configured ? '✅ Configurado' : '❌ Faltando' };
   }
+
+  return result;
+}
+
+async function sendBarberAccessCode(email, data) {
+  const { barberName, shopName, accessCode } = data;
+  const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+  const loginUrl = `${baseUrl}/login/barbeiro`;
+
+  const content = `
+    <p style="color:#F5F2ED;font-size:16px;margin:0 0 8px;">Olá <strong>${barberName}</strong>! 👋</p>
+    <p style="color:rgba(245,242,237,0.7);font-size:14px;line-height:1.7;margin:0 0 24px;">
+      Você foi cadastrado como barbeiro na <strong style="color:#C0392B;">${shopName}</strong>. 
+      Use o código abaixo para acessar sua agenda profissional no BarberOS.
+    </p>
+    <div style="background:#0D0D0D;border:2px solid #C0392B;border-radius:10px;padding:24px;text-align:center;margin:24px 0;">
+      <div style="font-size:36px;font-weight:700;letter-spacing:10px;color:#C0392B;font-family:'Courier New',monospace;">
+        ${accessCode}
+      </div>
+    </div>
+    <div style="text-align:center;margin:32px 0;">
+      <a href="${loginUrl}" style="background:#C0392B;color:#ffffff;padding:16px 32px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block;">
+        Acessar Painel do Barbeiro
+      </a>
+    </div>
+    <p style="color:rgba(245,242,237,0.5);font-size:12px;text-align:center;margin:16px 0 0;">
+      ⚠️ Por segurança, não compartilhe este código com ninguém.
+    </p>`;
+  
+  const html = getEmailTemplate('Seu Acesso ao BarberOS', content, shopName);
+  return sendEmail(email, `${shopName} - Seu código de acesso ao BarberOS`, html);
 }
 
 module.exports = {
+  sendEmail,
   sendVerificationCode,
   verifyCode,
   sendWelcomeEmail,
-  sendReactivationAlert
-};
-
-/**
- * Envia código de verificação por email
- */
-async function sendVerificationCode(email, purpose = 'verificacao') {
-  try {
-    const code = generateCode();
-    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutos
-
-    // Armazenar código
-    verificationCodes.set(email, {
-      code,
-      expiresAt,
-      purpose,
-      attempts: 0
-    });
-
-    // Template HTML elegante
-    const htmlTemplate = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #f9f9f9; padding: 30px; }
-          .code-box { background: white; border: 2px solid #667eea; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0; }
-          .code-box .code { font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #667eea; }
-          .code-box .expires { font-size: 12px; color: #666; margin-top: 10px; }
-          .footer { background: #f0f0f0; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 8px 8px; }
-          h1 { margin: 0; }
-          p { margin: 10px 0; }
-          .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>✂️ BarberOS - Verificação de Email</h1>
-          </div>
-          
-          <div class="content">
-            <p>Olá,</p>
-            
-            <p>Você solicitou um código de verificação para ${purpose === 'login' ? 'fazer login' : 'verificar seu email'} em <strong>BarberOS</strong>.</p>
-            
-            <p>Use o código abaixo para completar o processo (válido por 15 minutos):</p>
-            
-            <div class="code-box">
-              <div class="code">${code}</div>
-              <div class="expires">Válido por 15 minutos</div>
-            </div>
-            
-            <div class="warning">
-              <strong>⚠️ Aviso de segurança:</strong> Nunca compartilhe este código. Nós nunca pediremos seu código por email.
-            </div>
-            
-            <p>Se você não solicitou este código, ignore este email.</p>
-            
-            <p>
-              Atenciosamente,<br>
-              <strong>Equipe BarberOS</strong><br>
-              <small>Sistema de Agendamento para Barbearias</small>
-            </p>
-          </div>
-          
-          <div class="footer">
-            <p>&copy; 2026 BarberOS. Todos os direitos reservados.</p>
-            <p>Este é um email automático, não responda.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const transporter = getTransporter();
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'noreply@barberos.app',
-      to: email,
-      subject: `Seu código de verificação: ${code}`,
-      html: htmlTemplate,
-      text: `Seu código de verificação é: ${code}\nVálido por 15 minutos.`
-    });
-
-    console.log(`✅ Código enviado para ${email}`);
-    return { success: true, message: 'Código enviado com sucesso' };
-
-  } catch (error) {
-    console.error('❌ Erro ao enviar email:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Verifica se o código é válido
- */
-function verifyCode(email, code) {
-  const stored = verificationCodes.get(email);
-
-  if (!stored) {
-    return { valid: false, message: 'Nenhum código enviado para este email' };
-  }
-
-  // Verificar expiração
-  if (Date.now() > stored.expiresAt) {
-    verificationCodes.delete(email);
-    return { valid: false, message: 'Código expirou. Solicite um novo.' };
-  }
-
-  // Limitar tentativas
-  if (stored.attempts >= 5) {
-    verificationCodes.delete(email);
-    return { valid: false, message: 'Muitas tentativas. Solicite um novo código.' };
-  }
-
-  // Verificar código
-  if (stored.code !== code) {
-    stored.attempts++;
-    return { valid: false, message: 'Código incorreto' };
-  }
-
-  // Código válido
-  verificationCodes.delete(email);
-  return { valid: true, message: 'Código verificado com sucesso', purpose: stored.purpose };
-}
-
-/**
- * Envia email de confirmação de cadastro
- */
-async function sendWelcomeEmail(email, name, shopName) {
-  try {
-    const htmlTemplate = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #f9f9f9; padding: 30px; }
-          .footer { background: #f0f0f0; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 8px 8px; }
-          h1 { margin: 0; }
-          .btn { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>✂️ Bem-vindo ao BarberOS!</h1>
-          </div>
-          
-          <div class="content">
-            <p>Olá <strong>${name}</strong>,</p>
-            
-            <p>Sua barbearia <strong>${shopName}</strong> foi registrada com sucesso! 🎉</p>
-            
-            <p>Você agora tem acesso completo a:</p>
-            <ul>
-              <li>📅 Agendamentos online</li>
-              <li>👥 Gerenciamento de clientes</li>
-              <li>💇 Controle de serviços</li>
-              <li>💰 Relatórios financeiros</li>
-              <li>💬 Integração WhatsApp (novo!)</li>
-              <li>🔄 Sistema de reativação de clientes</li>
-            </ul>
-            
-            <a href="http://localhost:3000" class="btn">Acessar Dashboard</a>
-            
-            <p>Se tiver qualquer dúvida, entre em contato conosco.</p>
-            
-            <p>
-              Atenciosamente,<br>
-              <strong>Equipe BarberOS</strong>
-            </p>
-          </div>
-          
-          <div class="footer">
-            <p>&copy; 2026 BarberOS. Todos os direitos reservados.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const transporter = getTransporter();
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'noreply@barberos.app',
-      to: email,
-      subject: `Bem-vindo ao BarberOS, ${name}!`,
-      html: htmlTemplate
-    });
-
-    console.log(`✅ Email de boas-vindas enviado para ${email}`);
-    return { success: true };
-
-  } catch (error) {
-    console.error('❌ Erro ao enviar email de boas-vindas:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Envia alerta de reativação de cliente
- */
-async function sendReactivationAlert(email, clientName, shopName) {
-  try {
-    const htmlTemplate = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #f9f9f9; padding: 30px; }
-          .stat-box { background: white; padding: 15px; margin: 10px 0; border-left: 4px solid #f5576c; border-radius: 4px; }
-          .footer { background: #f0f0f0; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 8px 8px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🔄 Cliente para Reativar!</h1>
-          </div>
-          
-          <div class="content">
-            <p>Olá,</p>
-            
-            <p>Seu sistema BarberOS identificou um cliente que pode estar desengajado:</p>
-            
-            <div class="stat-box">
-              <strong>Cliente:</strong> ${clientName}<br>
-              <strong>Barbearia:</strong> ${shopName}<br>
-              <strong>Status:</strong> Sem visitas recentes
-            </div>
-            
-            <p>Envie uma mensagem de reativação agora!</p>
-            
-            <p style="margin-top: 20px;">
-              👋 Seus clientes continuam voltando com BarberOS!
-            </p>
-          </div>
-          
-          <div class="footer">
-            <p>&copy; 2026 BarberOS. Todos os direitos reservados.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const transporter = getTransporter();
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'noreply@barberos.app',
-      to: email,
-      subject: `🔄 ${clientName} - Cliente para reativar em ${shopName}`,
-      html: htmlTemplate
-    });
-
-    return { success: true };
-
-  } catch (error) {
-    console.error('❌ Erro ao enviar alerta:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-module.exports = {
-  sendVerificationCode,
-  verifyCode,
-  sendWelcomeEmail,
+  sendAppointmentConfirmation,
   sendReactivationAlert,
-  getTransporter
+  sendRecurrenceReminder,
+  sendBarberAccessCode,
+  testEmailConfig,
+  getEmailTemplate
 };
