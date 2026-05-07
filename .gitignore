@@ -1,51 +1,12 @@
-# Dependencies
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-package-lock.json
-yarn.lock
-
-# Database
-*.db
-*.db-shm
-*.db-wal
-backups/
-
-# Environment
 .env
-.env.local
-.env.production
-.env.*.local
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-
-# OS
-.DS_Store
-Thumbs.db
-.Spotlight-V100
-.Trashes
-
-# Logs
-logs/
+*.db
 *.log
-
-# Temp files
-tmp/
-temp/
-*.tmp
-
-# Build
+.DS_Store
+.vscode/
+.temp/
 dist/
 build/
-
-# Testing
-coverage/
-.nyc_output/
+.next/
+out/
+.vercel/
