@@ -2,6 +2,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const config = require('../config');
 
+let db = null;
 let isInitialized = false;
 
 function getDb() {
@@ -287,7 +288,7 @@ const initDatabase = () => {
 };
 
 module.exports = {
-  db,
+  getDb,
   run,
   get,
   all,
