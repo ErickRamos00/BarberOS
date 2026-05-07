@@ -10,8 +10,8 @@ const config = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   HOST: process.env.HOST || 'localhost',
 
-  // Segurança
-  JWT_SECRET: process.env.JWT_SECRET || 'barber-secret-key-change-in-production',
+  // Segurança - Puxar SEMPRE da Vercel em produção
+  JWT_SECRET: process.env.JWT_SECRET,
   JWT_EXPIRES_IN: '30d',
   BCRYPT_ROUNDS: 10,
 
@@ -116,8 +116,8 @@ const config = {
 
 // Validar configurações críticas em produção
 if (config.isProduction()) {
-  if (config.JWT_SECRET === 'barber-secret-key-change-in-production') {
-    console.error('❌ AVISO CRÍTICO: JWT_SECRET não foi alterado em produção! Use as variáveis de ambiente da Vercel.');
+  if (!config.JWT_SECRET) {
+    console.error('❌ ERRO CRÍTICO: JWT_SECRET não configurado na Vercel!');
   }
 }
 
