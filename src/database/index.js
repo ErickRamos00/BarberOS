@@ -14,8 +14,10 @@ function getDb() {
       if (err) {
         console.error('❌ Erro ao conectar no banco:', err.message);
       } else {
-        console.log('✅ Conectado ao banco de dados SQLite');
+        console.log('✅ Conectado ao banco de dados SQLite:', DB_PATH);
         db.run('PRAGMA foreign_keys = ON');
+        
+        // Inicializar tabelas IMEDIATAMENTE e de forma serializada
         if (!isInitialized) {
           isInitialized = true;
           initDatabase();

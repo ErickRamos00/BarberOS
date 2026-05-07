@@ -3,6 +3,10 @@ const cors = require('cors');
 const path = require('path');
 const config = require('./src/config');
 const { errorHandler, notFoundHandler, createRateLimiter } = require('./src/middleware');
+const { getDb } = require('./src/database');
+
+// Pré-inicializar banco de dados
+getDb();
 
 // Importação direta das rotas para garantir que a Vercel as inclua no build
 const authRoutes = require('./src/routes/auth');
