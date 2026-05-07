@@ -36,10 +36,13 @@ const get = async (sql, params = []) => {
 
   let query = supabase.from(table).select('*');
 
-  // Tradutor Inteligente de Múltiplos Filtros (WHERE col1 = ? AND col2 = ?)
+  // Tradutor Inteligente de Múltiplos Filtros
   const filterMatches = [...sql.matchAll(/(\w+)\s*=/gi)];
+  console.log(`📡 [Supabase Query] Tabela: ${table} | Filtros encontrados:`, filterMatches.map(m => m[1]));
+  
   filterMatches.forEach((match, index) => {
     if (params[index] !== undefined) {
+      console.log(`   └─ eq('${match[1]}', '${params[index]}')`);
       query = query.eq(match[1], params[index]);
     }
   });
