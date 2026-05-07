@@ -16,7 +16,7 @@ const config = {
   BCRYPT_ROUNDS: 10,
 
   // Banco de dados
-  DATABASE_PATH: process.env.DATABASE_PATH || './barber.db',
+  DATABASE_PATH: process.env.NODE_ENV === 'production' ? '/tmp/barber.db' : (process.env.DATABASE_PATH || './barber.db'),
 
   // CORS
   CORS_ORIGIN: process.env.CORS_ORIGIN || process.env.BASE_URL || 'http://localhost:3000',
