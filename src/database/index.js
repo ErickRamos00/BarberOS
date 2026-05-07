@@ -79,10 +79,12 @@ const all = (sql, params = []) => {
 
 const initDatabase = () => {
   const currentDb = getDb();
+  if (!currentDb) return;
+
   currentDb.serialize(() => {
     console.log('🔄 Inicializando banco de dados...');
     // Tabela: Usuários (Donos)
-    db.run(`
+    currentDb.run(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -98,7 +100,7 @@ const initDatabase = () => {
     `);
 
     // Tabela: Barbeiros
-    db.run(`
+    currentDb.run(`
       CREATE TABLE IF NOT EXISTS barbers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -118,7 +120,7 @@ const initDatabase = () => {
     `);
 
     // Tabela: Especialidades do barbeiro
-    db.run(`
+    currentDb.run(`
       CREATE TABLE IF NOT EXISTS barber_specialties (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         barber_id INTEGER NOT NULL,
@@ -129,7 +131,7 @@ const initDatabase = () => {
     `);
 
     // Tabela: Dias de trabalho
-    db.run(`
+    currentDb.run(`
       CREATE TABLE IF NOT EXISTS barber_working_days (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         barber_id INTEGER NOT NULL,
@@ -139,7 +141,7 @@ const initDatabase = () => {
     `);
 
     // Tabela: Serviços
-    db.run(`
+    currentDb.run(`
       CREATE TABLE IF NOT EXISTS services (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -154,7 +156,7 @@ const initDatabase = () => {
     `);
 
     // Tabela: Agendamentos
-    db.run(`
+    currentDb.run(`
       CREATE TABLE IF NOT EXISTS appointments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -174,7 +176,7 @@ const initDatabase = () => {
     `);
 
     // Tabela: Clientes
-    db.run(`
+    currentDb.run(`
       CREATE TABLE IF NOT EXISTS clients (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -191,7 +193,7 @@ const initDatabase = () => {
     `);
 
     // Tabela: Configurações
-    db.run(`
+    currentDb.run(`
       CREATE TABLE IF NOT EXISTS configs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER UNIQUE NOT NULL,
@@ -205,7 +207,7 @@ const initDatabase = () => {
     `);
 
     // Tabela: Identidade Visual
-    db.run(`
+    currentDb.run(`
       CREATE TABLE IF NOT EXISTS identity (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER UNIQUE NOT NULL,
@@ -223,7 +225,7 @@ const initDatabase = () => {
     `);
 
     // Tabela: Regras de Reativação
-    db.run(`
+    currentDb.run(`
       CREATE TABLE IF NOT EXISTS reactivation_rules (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -241,7 +243,7 @@ const initDatabase = () => {
     `);
 
     // Tabela: Configuração WhatsApp
-    db.run(`
+    currentDb.run(`
       CREATE TABLE IF NOT EXISTS whatsapp_config (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER UNIQUE NOT NULL,
@@ -258,7 +260,7 @@ const initDatabase = () => {
     `);
 
     // Tabela: Templates de Mensagens
-    db.run(`
+    currentDb.run(`
       CREATE TABLE IF NOT EXISTS message_templates (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -274,7 +276,7 @@ const initDatabase = () => {
     `);
 
     // Tabela: Histórico de Envios
-    db.run(`
+    currentDb.run(`
       CREATE TABLE IF NOT EXISTS message_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
