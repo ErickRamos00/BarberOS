@@ -36,11 +36,13 @@ const get = async (sql, params = []) => {
 
   let query = supabase.from(table).select('*');
 
-  // Lógica simples para WHERE (ex: email = ?)
-  const whereMatch = sql.match(/WHERE\s+(\w+)\s*=/i);
-  if (whereMatch && params.length > 0) {
-    query = query.eq(whereMatch[1], params[0]);
-  }
+  // Tradutor Inteligente de Múltiplos Filtros (WHERE col1 = ? AND col2 = ?)
+  const filterMatches = [...sql.matchAll(/(\w+)\s*=/gi)];
+  filterMatches.forEach((match, index) => {
+    if (params[index] !== undefined) {
+      query = query.eq(match[1], params[index]);
+    }
+  });
 
   const { data, error } = await query.single();
   if (error && error.code !== 'PGRST116') { // PGRST116 = Not Found (comum em login/verificação)
@@ -61,11 +63,13 @@ const all = async (sql, params = []) => {
 
   let query = supabase.from(table).select('*');
 
-  // Lógica para filtros básicos (user_id = ?)
-  const whereMatch = sql.match(/WHERE\s+(\w+)\s*=/i);
-  if (whereMatch && params.length > 0) {
-    query = query.eq(whereMatch[1], params[0]);
-  }
+  // Tradutor de Múltiplos Filtros
+  const filterMatches = [...sql.matchAll(/(\w+)\s*=/gi)];
+  filterMatches.forEach((match, index) => {
+    if (params[index] !== undefined) {
+      query = query.eq(match[1], params[index]);
+    }
+  });
 
   const { data, error } = await query;
   if (error) {
@@ -112,19 +116,34 @@ const run = async (sql, params = []) => {
         dataObj[col] = params[index];
       });
 
-      const whereVal = params[params.length - 1]; // Geralmente o ID é o último parâmetro
-      const { error } = await supabase.from(table).update(dataObj).eq(whereMatch[1], whereVal);
+      // Aplicar filtros dinâmicos no UPDATE
+      const whereMatches = [...sql.matchAll(/(\w+)\s*=/gi)];
+      const updateQuery = supabase.from(table).update(dataObj);
+      
+      // Filtros do UPDATE (geralmente vêm após os valores do SET)
+      const filterStart = setParts.length;
+      whereMatches.slice(filterStart).forEach((match, index) => {
+        const paramIndex = filterStart + index;
+        if (params[paramIndex] !== undefined) {
+          updateQuery.eq(match[1], params[paramIndex]);
+        }
+      });
+
+      const { error } = await updateQuery;
       if (error) throw error;
     }
   }
 
   // DELETE
   if (sql.toLowerCase().includes('delete')) {
-    const whereMatch = sql.match(/WHERE\s+(\w+)\s*=/i);
-    if (whereMatch && params.length > 0) {
-      const { error } = await supabase.from(table).delete().eq(whereMatch[1], params[0]);
-      if (error) throw error;
-    }
+    const whereMatches = [...sql.matchAll(/(\w+)\s*=/gi)];
+    const deleteQuery = supabase.from(table).delete();
+    whereMatches.forEach((match, index) => {
+      if (params[index] !== undefined) {
+        deleteQuery.eq(match[1], params[index]);
+      }
+    });
+    const { error } = await deleteQuery;
   }
 
   return { changes: 1 };
