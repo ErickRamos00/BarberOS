@@ -1,4 +1,3 @@
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const config = require('../config');
 
@@ -8,26 +7,34 @@ let isInitialized = false;
 function getDb() {
   if (db) return db;
   
-  const DB_PATH = config.DATABASE_PATH;
-  db = new sqlite3.Database(DB_PATH, (err) => {
-    if (err) {
-      console.error('❌ Erro ao conectar no banco:', err.message);
-    } else {
-      console.log('✅ Conectado ao banco de dados SQLite');
-      db.run('PRAGMA foreign_keys = ON');
-      if (!isInitialized) {
-        isInitialized = true;
-        initDatabase();
+  try {
+    const sqlite3 = require('sqlite3').verbose();
+    const DB_PATH = config.DATABASE_PATH;
+    db = new sqlite3.Database(DB_PATH, (err) => {
+      if (err) {
+        console.error('❌ Erro ao conectar no banco:', err.message);
+      } else {
+        console.log('✅ Conectado ao banco de dados SQLite');
+        db.run('PRAGMA foreign_keys = ON');
+        if (!isInitialized) {
+          isInitialized = true;
+          initDatabase();
+        }
       }
-    }
-  });
+    });
+  } catch (err) {
+    console.error('❌ CRÍTICO: Falha ao carregar sqlite3:', err.message);
+  }
   return db;
 }
 
 // Promisify database methods
 const run = (sql, params = []) => {
   return new Promise((resolve, reject) => {
-    getDb().run(sql, params, function(err) {
+    const currentDb = getDb();
+    if (!currentDb) return reject(new Error('Banco de dados não disponível'));
+    
+    currentDb.run(sql, params, function(err) {
       if (err) {
         console.error('DB Error (run):', sql, err);
         reject(err);
@@ -40,7 +47,10 @@ const run = (sql, params = []) => {
 
 const get = (sql, params = []) => {
   return new Promise((resolve, reject) => {
-    getDb().get(sql, params, (err, row) => {
+    const currentDb = getDb();
+    if (!currentDb) return reject(new Error('Banco de dados não disponível'));
+
+    currentDb.get(sql, params, (err, row) => {
       if (err) {
         console.error('DB Error (get):', sql, err);
         reject(err);
@@ -53,7 +63,10 @@ const get = (sql, params = []) => {
 
 const all = (sql, params = []) => {
   return new Promise((resolve, reject) => {
-    getDb().all(sql, params, (err, rows) => {
+    const currentDb = getDb();
+    if (!currentDb) return reject(new Error('Banco de dados não disponível'));
+
+    currentDb.all(sql, params, (err, rows) => {
       if (err) {
         console.error('DB Error (all):', sql, err);
         reject(err);
