@@ -1,24 +1,10 @@
 const express = require('express');
 const { run, get, all } = require('../database');
+const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Middleware de autenticação
-router.use((req, res, next) => {
-  const token = req.headers['authorization']?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'Token não fornecido' });
-  }
-  
-  try {
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(token, 'barber-secret-key-change-in-production');
-    req.userId = decoded.id;
-    next();
-  } catch (err) {
-    res.status(401).json({ error: 'Token inválido' });
-  }
-});
+router.use(authenticateToken);
 
 // Listar serviços
 router.get('/', async (req, res) => {
@@ -27,6 +13,18 @@ router.get('/', async (req, res) => {
       'SELECT * FROM services WHERE user_id = ? AND active = 1 ORDER BY name',
       [req.userId]
     );
+    
+    // Add frontend-friendly aliases
+    for (let svc of services) {
+      svc.desc = svc.description || '';
+      // Find barbers that can do this service via barber_specialties
+      const barberLinks = await all(
+        'SELECT barber_id FROM barber_specialties WHERE service_id = ?',
+        [svc.id]
+      );
+      svc.barbers = barberLinks.map(b => String(b.barber_id));
+    }
+    
     res.json(services);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -54,16 +52,28 @@ router.get('/:id', async (req, res) => {
 // Criar serviço
 router.post('/', async (req, res) => {
   try {
-    const { name, duration, price, description } = req.body;
+    const { name, duration, price, barbers } = req.body;
+    const description = req.body.description || req.body.desc || '';
     
     const result = await run(
       `INSERT INTO services (user_id, name, duration, price, description)
        VALUES (?, ?, ?, ?, ?)`,
-      [req.userId, name, duration, price, description]
+      [req.userId, name, duration || 30, price || 0, description]
     );
 
-    const service = await get('SELECT * FROM services WHERE id = ?', [result.lastID]);
-    res.status(201).json({ message: 'Serviço criado', service });
+    const serviceId = result.lastID;
+    
+    // Link barbers via barber_specialties
+    if (barbers && barbers.length) {
+      for (const bid of barbers) {
+        await run('INSERT OR IGNORE INTO barber_specialties (barber_id, service_id) VALUES (?, ?)', [bid, serviceId]);
+      }
+    }
+
+    const service = await get('SELECT * FROM services WHERE id = ?', [serviceId]);
+    service.desc = service.description || '';
+    service.barbers = barbers || [];
+    res.status(201).json(service);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -72,7 +82,8 @@ router.post('/', async (req, res) => {
 // Atualizar serviço
 router.put('/:id', async (req, res) => {
   try {
-    const { name, duration, price, description } = req.body;
+    const { name, duration, price, barbers } = req.body;
+    const description = req.body.description || req.body.desc || '';
     
     await run(
       `UPDATE services SET name = ?, duration = ?, price = ?, description = ?
@@ -80,8 +91,18 @@ router.put('/:id', async (req, res) => {
       [name, duration, price, description, req.params.id, req.userId]
     );
 
+    // Update barber links
+    if (barbers) {
+      await run('DELETE FROM barber_specialties WHERE service_id = ?', [req.params.id]);
+      for (const bid of barbers) {
+        await run('INSERT OR IGNORE INTO barber_specialties (barber_id, service_id) VALUES (?, ?)', [bid, req.params.id]);
+      }
+    }
+
     const service = await get('SELECT * FROM services WHERE id = ?', [req.params.id]);
-    res.json({ message: 'Serviço atualizado', service });
+    service.desc = service.description || '';
+    service.barbers = barbers || [];
+    res.json(service);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

@@ -1,24 +1,10 @@
 const express = require('express');
 const { run, get } = require('../database');
+const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Middleware de autenticação
-router.use((req, res, next) => {
-  const token = req.headers['authorization']?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'Token não fornecido' });
-  }
-  
-  try {
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(token, 'barber-secret-key-change-in-production');
-    req.userId = decoded.id;
-    next();
-  } catch (err) {
-    res.status(401).json({ error: 'Token inválido' });
-  }
-});
+router.use(authenticateToken);
 
 // ===== CONFIGURAÇÕES =====
 

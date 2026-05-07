@@ -1,24 +1,10 @@
 const express = require('express');
 const { run, get, all } = require('../database');
+const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Middleware de autenticação
-router.use((req, res, next) => {
-  const token = req.headers['authorization']?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'Token não fornecido' });
-  }
-  
-  try {
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(token, 'barber-secret-key-change-in-production');
-    req.userId = decoded.id;
-    next();
-  } catch (err) {
-    res.status(401).json({ error: 'Token inválido' });
-  }
-});
+router.use(authenticateToken);
 
 // Listar clientes
 router.get('/', async (req, res) => {
@@ -27,6 +13,12 @@ router.get('/', async (req, res) => {
       'SELECT * FROM clients WHERE user_id = ? ORDER BY name',
       [req.userId]
     );
+    
+    // Add frontend-friendly alias
+    for (let c of clients) {
+      c.since = c.created_at || '';
+    }
+    
     res.json(clients);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -85,7 +77,8 @@ router.post('/', async (req, res) => {
     );
 
     const client = await get('SELECT * FROM clients WHERE id = ?', [result.lastID]);
-    res.status(201).json({ message: 'Cliente criado', client });
+    client.since = client.created_at || '';
+    res.status(201).json(client);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -94,20 +87,67 @@ router.post('/', async (req, res) => {
 // Atualizar cliente
 router.put('/:id', async (req, res) => {
   try {
-    const { name, email, phone } = req.body;
+    const { name, email, phone, recurrence_days } = req.body;
     
     await run(
-      `UPDATE clients SET name = ?, email = ?, phone = ?
+      `UPDATE clients SET name = ?, email = ?, phone = ?, recurrence_days = ?
        WHERE id = ? AND user_id = ?`,
-      [name, email, phone, req.params.id, req.userId]
+      [name, email, phone, recurrence_days || 15, req.params.id, req.userId]
     );
 
     const client = await get('SELECT * FROM clients WHERE id = ?', [req.params.id]);
-    res.json({ message: 'Cliente atualizado', client });
+    client.since = client.created_at || '';
+    res.json(client);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
+
+// Enviar lembrete manual de recorrência
+router.post('/:id/send-reminder', async (req, res) => {
+  try {
+    const clientId = req.params.id;
+    const userId = req.userId;
+
+    const client = await get('SELECT * FROM clients WHERE id = ? AND user_id = ?', [clientId, userId]);
+    if (!client) return res.status(404).json({ error: 'Cliente não encontrado' });
+    if (!client.email) return res.status(400).json({ error: 'Cliente não possui e-mail cadastrado' });
+
+    const user = await get('SELECT shop_name, shop_slug FROM users WHERE id = ?', [userId]);
+    
+    // Pegar último serviço
+    const lastApt = await get(`
+      SELECT s.name as service_name, a.appointment_date 
+      FROM appointments a 
+      JOIN services s ON a.service_id = s.id 
+      WHERE a.client_id = ? AND a.status = 'done' 
+      ORDER BY a.appointment_date DESC LIMIT 1
+    `, [clientId]);
+
+    const lastService = lastApt ? lastApt.service_name : 'Serviços';
+    const recurrence = client.recurrence_days || 15;
+    
+    // Calcular data recomendada
+    const baseDate = lastApt ? new Date(lastApt.appointment_date.split(' ')[0] + 'T12:00:00') : new Date();
+    const recDate = new Date(baseDate);
+    recDate.setDate(baseDate.getDate() + recurrence);
+    const recommendedDate = recDate.toISOString().split('T')[0];
+
+    const { sendRecurrenceReminder } = require('../services/email');
+    await sendRecurrenceReminder(client.email, {
+      clientName: client.name,
+      shopName: user.shop_name,
+      shopSlug: user.shop_slug,
+      lastService: lastService,
+      recommendedDate: recommendedDate
+    });
+
+    res.json({ message: 'Lembrete enviado com sucesso!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // Buscar cliente por telefone (para agendamento rápido)
 router.get('/search/phone', async (req, res) => {

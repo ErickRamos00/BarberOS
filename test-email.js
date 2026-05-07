@@ -44,7 +44,20 @@ console.log(`🔍 Provider: ${provider.toUpperCase()}\n`);
 let isConfigured = false;
 let instruction = '';
 
-if (provider === 'mailgun') {
+if (provider === 'demo') {
+  console.log('✅ MODO DEMONSTRAÇÃO (para testes)');
+  isConfigured = true;
+  instruction = `
+🧪 Modo Demo Ativado!
+   Você pode testar o sistema sem API real.
+   
+Próximo passo:
+  1. node server.js
+  2. Teste: curl -X POST http://localhost:3000/api/auth/send-code ...
+  3. Verá os emails sendo "enviados" no console
+  `;
+}
+else if (provider === 'mailgun') {
   console.log('Configuração necessária para MAILGUN:');
   const hasKey = envVars.MAILGUN_API_KEY && !envVars.MAILGUN_API_KEY.includes('seu-');
   const hasDomain = envVars.MAILGUN_DOMAIN && !envVars.MAILGUN_DOMAIN.includes('seu-');

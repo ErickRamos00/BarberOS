@@ -55,6 +55,13 @@ async function apiLogin(email, password) {
   return data;
 }
 
+async function apiBarberLogin(email, access_code) {
+  const data = await apiCall('POST', '/auth/barber/login', { email, access_code });
+  authToken = data.token;
+  localStorage.setItem('token', authToken);
+  return data;
+}
+
 async function apiGetUser() {
   return await apiCall('GET', '/auth/me');
 }
@@ -215,6 +222,25 @@ async function apiGetDailyRevenue(period = 'week') {
 
 async function apiGetOccupancyRate(date) {
   return await apiCall('GET', `/finance/occupancy-rate?date=${date}`);
+}
+
+// ===== PUBLIC SHOP APIs (SaaS) =====
+async function apiGetShopPublic(slug) {
+  const response = await fetch(`${API_BASE}/shop/${slug}`);
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Erro ao carregar barbearia');
+  return data;
+}
+
+async function apiBookPublic(slug, data) {
+  const response = await fetch(`${API_BASE}/shop/${slug}/book`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Erro ao realizar agendamento');
+  return result;
 }
 
 // ===== HELPERS =====
