@@ -215,7 +215,9 @@ async function sendWithDemo(to, subject, htmlContent) {
 
 // ===== FUNÇÃO PRINCIPAL =====
 async function sendEmail(to, subject, htmlContent, textContent = null) {
-  const provider = (process.env.EMAIL_PROVIDER || 'demo').toLowerCase();
+  // Se SMTP_USER estiver presente, padrão é 'smtp', caso contrário 'demo'
+  const defaultProvider = process.env.SMTP_USER ? 'smtp' : 'demo';
+  const provider = (process.env.EMAIL_PROVIDER || defaultProvider).toLowerCase();
   console.log(`📧 Enviando email via [${provider}] para ${to}`);
 
   switch (provider) {

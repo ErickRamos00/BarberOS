@@ -15,8 +15,8 @@ const config = {
   JWT_EXPIRES_IN: '30d',
   BCRYPT_ROUNDS: 10,
 
-  // Banco de dados - Em produção (Vercel) usamos memória para evitar erro 500 de escrita
-  DATABASE_PATH: process.env.NODE_ENV === 'production' ? ':memory:' : (process.env.DATABASE_PATH || './barber.db'),
+  // Banco de dados - Em produção (Vercel) usamos /tmp para alguma persistência básica
+  DATABASE_PATH: process.env.NODE_ENV === 'production' ? '/tmp/barber.db' : (process.env.DATABASE_PATH || './barber.db'),
 
   // CORS
   CORS_ORIGIN: process.env.CORS_ORIGIN || process.env.BASE_URL || 'http://localhost:3000',
