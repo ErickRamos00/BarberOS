@@ -78,12 +78,16 @@ app.get('/api/status', (req, res) => {
 });
 
 // Serve frontend
-app.get(['/', '/s/:slug'], (req, res) => {
+app.get('*', (req, res) => {
+  // Se for uma rota de API que não existe, retorna 404
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API route not found' });
+  }
+  // Para qualquer outra rota, serve o index.html (SPA)
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // ===== TRATAMENTO DE ERROS =====
-app.use(notFoundHandler);
 app.use(errorHandler);
 
 // ===== INICIAR SERVIDOR =====
