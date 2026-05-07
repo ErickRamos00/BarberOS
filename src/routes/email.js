@@ -88,7 +88,7 @@ router.post('/verify-code', async (req, res) => {
     if (result.valid) {
       res.json({ valid: true, message: result.message });
     } else {
-      res.status(400).json({ valid: false, message: result.message });
+      res.status(400).json({ valid: false, error: result.message });
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
