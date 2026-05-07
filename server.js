@@ -4,21 +4,6 @@ const path = require('path');
 const config = require('./src/config');
 const { errorHandler } = require('./src/middleware');
 
-// Rotas
-const authRoutes = require('./src/routes/auth');
-const barberRoutes = require('./src/routes/barbers');
-const serviceRoutes = require('./src/routes/services');
-const appointmentRoutes = require('./src/routes/appointments');
-const clientRoutes = require('./src/routes/clients');
-const configRoutes = require('./src/routes/config');
-const financeRoutes = require('./src/routes/finance');
-const reactivationRoutes = require('./src/routes/reactivation');
-const whatsappRoutes = require('./src/routes/whatsapp');
-const messageHistoryRoutes = require('./src/routes/message-history');
-const emailRoutes = require('./src/routes/email');
-const shopRoutes = require('./src/routes/shop');
-const automationRoutes = require('./src/routes/automation');
-
 const app = express();
 
 // ===== SEGURANÇA =====
@@ -36,42 +21,41 @@ app.use((req, res, next) => {
   next();
 });
 
-// ===== INICIALIZAÇÃO =====
-// Desativada no boot para garantir que o site abra
+// ===== ROTAS DINÂMICAS (SAFE BOOT) =====
+// Carregamos as rotas dentro de blocos try/catch para evitar que erro no require de uma delas (como o sqlite3)
+// derrube o servidor inteiro no boot da Vercel.
 
-// ===== ROTAS =====
-app.use('/api/auth', authRoutes);
-app.use('/api/barbers', barberRoutes);
-app.use('/api/services', serviceRoutes);
-app.use('/api/appointments', appointmentRoutes);
-app.use('/api/clients', clientRoutes);
-app.use('/api/config', configRoutes);
-app.use('/api/finance', financeRoutes);
-app.use('/api/reactivation', reactivationRoutes);
-app.use('/api/whatsapp', whatsappRoutes);
-app.use('/api/messages', messageHistoryRoutes);
-app.use('/api/email', emailRoutes);
-app.use('/api/shop', shopRoutes);
-app.use('/api/automation', automationRoutes);
+const registerSafeRoute = (path, modulePath) => {
+  try {
+    const route = require(modulePath);
+    app.use(path, route);
+    console.log(`✅ Rota registrada: ${path}`);
+  } catch (err) {
+    console.error(`⚠️ Falha ao registrar rota ${path}:`, err.message);
+  }
+};
 
-// Health check
+registerSafeRoute('/api/auth', './src/routes/auth');
+registerSafeRoute('/api/barbers', './src/routes/barbers');
+registerSafeRoute('/api/services', './src/routes/services');
+registerSafeRoute('/api/appointments', './src/routes/appointments');
+registerSafeRoute('/api/clients', './src/routes/clients');
+registerSafeRoute('/api/config', './src/routes/config');
+registerSafeRoute('/api/finance', './src/routes/finance');
+registerSafeRoute('/api/reactivation', './src/routes/reactivation');
+registerSafeRoute('/api/whatsapp', './src/routes/whatsapp');
+registerSafeRoute('/api/messages', './src/routes/message-history');
+registerSafeRoute('/api/email', './src/routes/email');
+registerSafeRoute('/api/shop', './src/routes/shop');
+registerSafeRoute('/api/automation', './src/routes/automation');
+
+// Health check direto no app
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    timestamp: new Date(),
-    environment: config.NODE_ENV,
-    uptime: process.uptime()
-  });
-});
-
-// Status
-app.get('/api/status', (req, res) => {
-  res.json({
-    name: 'BarberOS',
-    version: '1.0.0',
-    author: 'BarberOS Team',
-    status: 'running',
-    timestamp: new Date()
+    message: 'BarberOS está vivo!',
+    time: new Date().toISOString(),
+    node_version: process.version
   });
 });
 
@@ -91,7 +75,6 @@ app.get('*', (req, res) => {
   const indexPath = path.join(__dirname, 'public', 'index.html');
   res.sendFile(indexPath, (err) => {
     if (err) {
-      // Se der erro ao servir o index, pelo menos não crasha o servidor todo
       res.status(200).send(`
         <html>
           <body style="background:#0d0d0d;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
@@ -111,59 +94,11 @@ app.get('*', (req, res) => {
 app.use(errorHandler);
 
 // ===== INICIAR SERVIDOR =====
-const server = app.listen(config.PORT, config.HOST, () => {
-  console.log(`
-╔════════════════════════════════════════╗
-║         🚀 BarberOS Backend             ║
-╚════════════════════════════════════════╝
-
-📍 Server: http://${config.HOST}:${config.PORT}
-🌍 Frontend: http://${config.HOST}:${config.PORT}
-🔒 Environment: ${config.NODE_ENV.toUpperCase()}
-📅 Started: ${new Date().toLocaleString('pt-BR')}
-
-💡 Dicas úteis:
-  • Acesse http://${config.HOST}:${config.PORT} no navegador
-  • Use email: demo@barberos.app e senha: demo123
-  • Veja os logs acima para monitorar requisições
-  • Pressione Ctrl+C para parar o servidor
-
-═════════════════════════════════════════
-  `);
-
-  if (!config.isProduction()) {
-    console.log('ℹ️ Modo desenvolvimento ativo');
-  } else {
-    console.log('⚠️ Modo produção - Certifique-se de alterar JWT_SECRET');
-  }
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('\n📛 Sinal SIGTERM recebido - Desligando...');
-  server.close(() => {
-    console.log('✅ Servidor encerrado com sucesso');
-    process.exit(0);
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`📍 Servidor rodando em: http://0.0.0.0:${PORT}`);
   });
-});
+}
 
-process.on('SIGINT', () => {
-  console.log('\n📛 Sinal SIGINT recebido - Desligando...');
-  server.close(() => {
-    console.log('✅ Servidor encerrado com sucesso');
-    process.exit(0);
-  });
-});
-
-// Tratamento de erros não capturados
-process.on('uncaughtException', (error) => {
-  console.error('❌ Erro não capturado:', error);
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Promise rejeitada não tratada:', reason);
-  process.exit(1);
-});
-
+// Exportar o app para a Vercel
 module.exports = app;
