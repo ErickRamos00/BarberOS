@@ -7,7 +7,7 @@ const { errorHandler, notFoundHandler, createRateLimiter } = require('./src/midd
 const app = express();
 
 // ===== SEGURANÇA =====
-app.use(cors({ origin: config.CORS_ORIGIN }));
+app.use(cors()); // Liberado para garantir conectividade total na Vercel
 app.use(express.json({ limit: config.MAX_UPLOAD_SIZE }));
 app.use(express.static(path.join(__dirname, 'public')));
 
