@@ -6,8 +6,9 @@
 const nodemailer = require('nodemailer');
 const axios = require('axios');
 
-// Códigos de verificação em memória
-const verificationCodes = new Map();
+const { run, get } = require('../database');
+
+// Códigos de verificação agora são salvos no Supabase para estabilidade na Vercel
 
 // Cache do transporter SMTP
 let smtpTransporter = null;
@@ -242,9 +243,11 @@ async function sendVerificationCode(email, purpose = 'verificacao') {
     const code = generateCode();
     const expiresAt = Date.now() + 15 * 60 * 1000;
 
-    verificationCodes.set(email.toLowerCase(), {
-      code, expiresAt, purpose, attempts: 0
-    });
+    // Salvar no banco de dados para persistência entre funções serverless
+    await run(
+      'INSERT INTO verification_codes (email, code, expires_at, purpose) VALUES (?, ?, ?, ?)',
+      [email.toLowerCase(), code, expiresAt, purpose]
+    );
 
     const content = `
       <p style="color:#F5F2ED;font-size:15px;line-height:1.6;margin:0 0 20px;">
@@ -280,25 +283,31 @@ async function sendVerificationCode(email, purpose = 'verificacao') {
   }
 }
 
-function verifyCode(email, code) {
-  const stored = verificationCodes.get(email.toLowerCase());
+async function verifyCode(email, code) {
+  try {
+    // Buscar o código mais recente para este email
+    const stored = await get(
+      'SELECT * FROM verification_codes WHERE email = ? AND code = ? ORDER BY created_at DESC LIMIT 1',
+      [email.toLowerCase(), code]
+    );
 
-  if (!stored) return { valid: false, message: 'Nenhum código pendente para este email' };
-  if (Date.now() > stored.expiresAt) {
-    verificationCodes.delete(email.toLowerCase());
-    return { valid: false, message: 'Código expirado. Solicite um novo.' };
-  }
-  if (stored.attempts >= 5) {
-    verificationCodes.delete(email.toLowerCase());
-    return { valid: false, message: 'Muitas tentativas. Solicite um novo código.' };
-  }
-  if (stored.code !== code) {
-    stored.attempts++;
-    return { valid: false, message: `Código incorreto. ${5 - stored.attempts} tentativas restantes.` };
-  }
+    if (!stored) {
+      return { valid: false, message: 'Código incorreto ou não encontrado. Solicite um novo.' };
+    }
 
-  verificationCodes.delete(email.toLowerCase());
-  return { valid: true, message: 'Código verificado com sucesso', purpose: stored.purpose };
+    if (Date.now() > Number(stored.expires_at)) {
+      await run('DELETE FROM verification_codes WHERE id = ?', [stored.id]);
+      return { valid: false, message: 'Código expirado. Solicite um novo.' };
+    }
+
+    // Código válido! Limpar para não ser usado de novo
+    await run('DELETE FROM verification_codes WHERE email = ?', [email.toLowerCase()]);
+    
+    return { valid: true, message: 'Código verificado com sucesso', purpose: stored.purpose };
+  } catch (err) {
+    console.error('❌ Erro na verificação do código:', err.message);
+    return { valid: false, message: 'Erro interno na verificação' };
+  }
 }
 
 // ===== EMAILS TRANSACIONAIS =====

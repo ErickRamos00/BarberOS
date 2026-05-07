@@ -83,7 +83,7 @@ router.post('/verify-code', async (req, res) => {
       return res.status(400).json({ error: 'Email e código são obrigatórios' });
     }
 
-    const result = verifyCode(email, code);
+    const result = await verifyCode(email, code);
     
     if (result.valid) {
       res.json({ valid: true, message: result.message });
