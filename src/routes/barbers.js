@@ -1,5 +1,5 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const { run, get, all } = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { sendBarberAccessCode } = require('../services/email');

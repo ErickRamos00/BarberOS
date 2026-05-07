@@ -6,7 +6,7 @@ const DB_PATH = config.DATABASE_PATH;
 const db = new sqlite3.Database(DB_PATH, (err) => {
   if (err) {
     console.error('❌ Erro ao conectar no banco:', err.message);
-    process.exit(1);
+    // Em produção/Vercel não matamos o processo para podermos ver logs
   } else {
     console.log('✅ Conectado ao banco de dados SQLite');
   }
