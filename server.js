@@ -4,14 +4,29 @@ const path = require('path');
 const config = require('./src/config');
 const { errorHandler, notFoundHandler, createRateLimiter } = require('./src/middleware');
 
+// Importação direta das rotas para garantir que a Vercel as inclua no build
+const authRoutes = require('./src/routes/auth');
+const barbersRoutes = require('./src/routes/barbers');
+const servicesRoutes = require('./src/routes/services');
+const appointmentsRoutes = require('./src/routes/appointments');
+const clientsRoutes = require('./src/routes/clients');
+const configRoutes = require('./src/routes/config');
+const financeRoutes = require('./src/routes/finance');
+const reactivationRoutes = require('./src/routes/reactivation');
+const whatsappRoutes = require('./src/routes/whatsapp');
+const messageHistoryRoutes = require('./src/routes/message-history');
+const emailRoutes = require('./src/routes/email');
+const shopRoutes = require('./src/routes/shop');
+const automationRoutes = require('./src/routes/automation');
+
 const app = express();
 
 // ===== SEGURANÇA =====
-app.use(cors()); // Liberado para garantir conectividade total na Vercel
+app.use(cors()); // Liberado para garantir conectividade total
 app.use(express.json({ limit: config.MAX_UPLOAD_SIZE }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rate limiter (Proteção básica)
+// Rate limiter
 if (config.isProduction()) {
   app.use(createRateLimiter(config.MAX_REQUESTS_PER_MINUTE, 60000));
 }
@@ -22,34 +37,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// ===== ROTAS DINÂMICAS (SAFE BOOT) =====
-// Carregamos as rotas dentro de blocos try/catch para evitar que erro no require de uma delas (como o sqlite3)
-// derrube o servidor inteiro no boot da Vercel.
-
-const registerSafeRoute = (path, modulePath) => {
-  try {
-    const route = require(modulePath);
-    app.use(path, route);
-    console.log(`✅ Rota registrada: ${path}`);
-  } catch (err) {
-    console.error(`⚠️ Falha ao registrar rota ${path}:`, err.message);
-  }
-};
-
-// Registro de todas as rotas do sistema
-registerSafeRoute('/api/auth', './src/routes/auth');
-registerSafeRoute('/api/barbers', './src/routes/barbers');
-registerSafeRoute('/api/services', './src/routes/services');
-registerSafeRoute('/api/appointments', './src/routes/appointments');
-registerSafeRoute('/api/clients', './src/routes/clients');
-registerSafeRoute('/api/config', './src/routes/config');
-registerSafeRoute('/api/finance', './src/routes/finance');
-registerSafeRoute('/api/reactivation', './src/routes/reactivation');
-registerSafeRoute('/api/whatsapp', './src/routes/whatsapp');
-registerSafeRoute('/api/messages', './src/routes/message-history');
-registerSafeRoute('/api/email', './src/routes/email');
-registerSafeRoute('/api/shop', './src/routes/shop');
-registerSafeRoute('/api/automation', './src/routes/automation');
+// ===== ROTAS =====
+app.use('/api/auth', authRoutes);
+app.use('/api/barbers', barbersRoutes);
+app.use('/api/services', servicesRoutes);
+app.use('/api/appointments', appointmentsRoutes);
+app.use('/api/clients', clientsRoutes);
+app.use('/api/config', configRoutes);
+app.use('/api/finance', financeRoutes);
+app.use('/api/reactivation', reactivationRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/messages', messageHistoryRoutes);
+app.use('/api/email', emailRoutes);
+app.use('/api/shop', shopRoutes);
+app.use('/api/automation', automationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -66,7 +67,7 @@ app.get('*', (req, res) => {
   const indexPath = path.join(__dirname, 'public', 'index.html');
   res.sendFile(indexPath, (err) => {
     if (err) {
-      res.status(200).send('<h1>BarberOS - Quase lá!</h1><p>O servidor ligou, mas o arquivo visual está sendo localizado. Atualize em instantes.</p>');
+      res.status(200).send('<h1>BarberOS - Iniciando...</h1><script>setTimeout(()=>location.reload(),2000)</script>');
     }
   });
 });
