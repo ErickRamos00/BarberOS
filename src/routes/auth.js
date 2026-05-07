@@ -3,9 +3,10 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { run, get } = require('../database');
 const { sendVerificationCode, verifyCode, sendWelcomeEmail } = require('../services/email');
+const config = require('../config');
 
 const router = express.Router();
-const SECRET_KEY = 'barber-secret-key-change-in-production';
+const SECRET_KEY = config.JWT_SECRET;
 
 // Middleware para verificar token
 const verifyToken = (req, res, next) => {
@@ -52,11 +53,16 @@ router.post('/register', async (req, res) => {
       [user.id]
     );
 
-    const token = jwt.sign({ id: user.id }, SECRET_KEY, { expiresIn: '30d' });
-    
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: 'owner' },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+
     res.json({
-      message: 'Usuário registrado com sucesso',
-      user: { id: user.id, email: user.email, name: user.name, shop: user.shop_name },
+      message: 'Login realizado com sucesso',
+      user: { id: user.id, name: user.name, email: user.email, role: 'owner' },
+      shop: { id: user.id, name: user.shop_name, slug: user.shop_slug },
       token
     });
   } catch (err) {
@@ -97,6 +103,55 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Login de Barbeiro
+router.post('/barber/login', async (req, res) => {
+  try {
+    const { email, access_code } = req.body;
+    
+    const barber = await get('SELECT * FROM barbers WHERE email = ? AND active = 1', [email]);
+    if (!barber) {
+      return res.status(400).json({ error: 'E-mail ou código inválidos' });
+    }
+
+    if (!barber.access_code) {
+      return res.status(400).json({ error: 'Barbeiro não possui código de acesso configurado' });
+    }
+
+    const validCode = await bcrypt.compare(String(access_code), barber.access_code);
+    if (!validCode) {
+      return res.status(400).json({ error: 'E-mail ou código inválidos' });
+    }
+
+    // Token com papel de barbeiro
+    const token = jwt.sign(
+      { id: barber.user_id, barberId: barber.id, role: 'barber' }, 
+      SECRET_KEY, 
+      { expiresIn: '30d' }
+    );
+    
+    const shop = await get('SELECT id, shop_name, shop_slug FROM users WHERE id = ?', [barber.user_id]);
+    
+    res.json({
+      message: 'Login de barbeiro realizado',
+      user: { 
+        id: barber.user_id,
+        barberId: barber.id,
+        name: barber.name,
+        role: 'barber'
+      },
+      shop: {
+        id: shop.id,
+        name: shop.shop_name,
+        slug: shop.shop_slug
+      },
+      token
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // Obter dados do usuário logado
 router.get('/me', verifyToken, async (req, res) => {
   try {
@@ -104,7 +159,11 @@ router.get('/me', verifyToken, async (req, res) => {
       'SELECT id, name, email, phone, shop_name, shop_slug, shop_address FROM users WHERE id = ?',
       [req.userId]
     );
-    res.json(user);
+    
+    res.json({
+      user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: 'owner' },
+      shop: { id: user.id, name: user.shop_name, slug: user.shop_slug, address: user.shop_address }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
