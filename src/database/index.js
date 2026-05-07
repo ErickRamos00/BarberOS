@@ -47,8 +47,15 @@ const get = async (sql, params = []) => {
     }
   });
 
-  const { data, error } = await query.single();
-  if (error && error.code !== 'PGRST116') { // PGRST116 = Not Found (comum em login/verificação)
+  // Garantir que pegamos o mais recente e apenas um
+  if (sql.toLowerCase().includes('order by created_at desc')) {
+    query = query.order('created_at', { ascending: false });
+  }
+  query = query.limit(1);
+
+  const { data, error } = await query.maybeSingle();
+  
+  if (error) {
     console.error('Supabase Get Error:', error);
     return null;
   }
