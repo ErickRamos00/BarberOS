@@ -2,8 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const config = require('./src/config');
-const db = require('./src/database');
-const { errorHandler, notFoundHandler, createRateLimiter } = require('./src/middleware');
+const { errorHandler } = require('./src/middleware');
 
 // Rotas
 const authRoutes = require('./src/routes/auth');
@@ -27,10 +26,9 @@ app.use(cors({ origin: config.CORS_ORIGIN }));
 app.use(express.json({ limit: config.MAX_UPLOAD_SIZE }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rate limiter
-if (config.isProduction()) {
-  app.use(createRateLimiter(config.MAX_REQUESTS_PER_MINUTE, 60000));
-}
+// Configurações básicas (Hardcoded para boot seguro)
+const PORT = process.env.PORT || 3000;
+const CORS_ORIGIN = '*';
 
 // ===== LOGGING =====
 app.use((req, res, next) => {
@@ -39,7 +37,7 @@ app.use((req, res, next) => {
 });
 
 // ===== INICIALIZAÇÃO =====
-// db.initDatabase() será chamado automaticamente no primeiro acesso ao banco
+// Desativada no boot para garantir que o site abra
 
 // ===== ROTAS =====
 app.use('/api/auth', authRoutes);
