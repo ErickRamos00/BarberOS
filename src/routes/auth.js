@@ -92,8 +92,12 @@ router.post('/login', async (req, res) => {
       user: { 
         id: user.id, 
         email: user.email, 
-        name: user.name, 
-        shop: user.shop_name,
+        name: user.name,
+        role: 'owner'
+      },
+      shop: {
+        id: user.id,
+        name: user.shop_name,
         slug: user.shop_slug
       },
       token
