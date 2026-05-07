@@ -5,11 +5,16 @@ const config = require('../config');
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ ERRO: SUPABASE_URL ou SUPABASE_KEY não configurados!');
+let supabase;
+try {
+  if (supabaseUrl && supabaseKey) {
+    supabase = createClient(supabaseUrl, supabaseKey);
+  } else {
+    console.error('⚠️ AVISO: SUPABASE_URL ou SUPABASE_KEY não configurados!');
+  }
+} catch (err) {
+  console.error('❌ Erro ao criar cliente Supabase:', err.message);
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 /**
  * Funções de compatibilidade para manter o sistema funcionando
@@ -24,6 +29,7 @@ const parseSql = (sql) => {
 };
 
 const get = async (sql, params = []) => {
+  if (!supabase) return null;
   const table = parseSql(sql);
   if (!table) throw new Error('Tabela não identificada na query');
 
@@ -44,6 +50,7 @@ const get = async (sql, params = []) => {
 };
 
 const all = async (sql, params = []) => {
+  if (!supabase) return [];
   const table = parseSql(sql);
   if (!table) throw new Error('Tabela não identificada na query');
 
@@ -64,6 +71,7 @@ const all = async (sql, params = []) => {
 };
 
 const run = async (sql, params = []) => {
+  if (!supabase) return { lastID: 0, changes: 0 };
   const table = parseSql(sql);
   if (!table) throw new Error('Tabela não identificada na query');
 
