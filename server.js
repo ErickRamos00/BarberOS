@@ -2,17 +2,34 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const config = require('./src/config');
+const { errorHandler, notFoundHandler, createRateLimiter } = require('./src/middleware');
 
 const app = express();
 
-// Configurações ultra-básicas embutidas para evitar carregar arquivos externos
-app.use(cors());
-app.use(express.json());
+// ===== SEGURANÇA =====
+app.use(cors({ origin: config.CORS_ORIGIN }));
+app.use(express.json({ limit: config.MAX_UPLOAD_SIZE }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rota de teste interna
-app.get('/api/test-direct', (req, res) => {
-  res.json({ status: 'ok', source: 'server.js direto' });
+// Rate limiter (Proteção básica)
+if (config.isProduction()) {
+  app.use(createRateLimiter(config.MAX_REQUESTS_PER_MINUTE, 60000));
+}
+
+// ===== LOGGING =====
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'BarberOS está vivo!',
+    time: new Date().toISOString(),
+    node_version: process.version
+  });
 });
 
 // Serve frontend
@@ -24,5 +41,9 @@ app.get('*', (req, res) => {
     }
   });
 });
+
+// ===== TRATAMENTO DE ERROS =====
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 module.exports = app;
