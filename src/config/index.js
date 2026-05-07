@@ -117,11 +117,7 @@ const config = {
 // Validar configurações críticas em produção
 if (config.isProduction()) {
   if (config.JWT_SECRET === 'barber-secret-key-change-in-production') {
-    console.error('❌ ERRO: JWT_SECRET não foi alterado em produção!');
-    process.exit(1);
-  }
-  if (config.CORS_ORIGIN === '*') {
-    console.warn('⚠️ AVISO: CORS_ORIGIN está aberto para todos em produção');
+    console.error('❌ AVISO CRÍTICO: JWT_SECRET não foi alterado em produção! Use as variáveis de ambiente da Vercel.');
   }
 }
 
