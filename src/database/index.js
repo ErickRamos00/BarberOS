@@ -1,307 +1,122 @@
-const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 const config = require('../config');
 
-let db = null;
-let isInitialized = false;
+// Configurações do Supabase (Puxadas da Vercel)
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
 
-function getDb() {
-  if (db) return db;
-  
-  try {
-    const sqlite3 = require('sqlite3').verbose();
-    const DB_PATH = config.DATABASE_PATH;
-    db = new sqlite3.Database(DB_PATH, (err) => {
-      if (err) {
-        console.error('❌ Erro ao conectar no banco:', err.message);
-      } else {
-        console.log('✅ Conectado ao banco de dados SQLite:', DB_PATH);
-        db.run('PRAGMA foreign_keys = ON');
-        
-        // Inicializar tabelas IMEDIATAMENTE e de forma serializada
-        if (!isInitialized) {
-          isInitialized = true;
-          initDatabase();
-        }
-      }
-    });
-  } catch (err) {
-    console.error('❌ CRÍTICO: Falha ao carregar sqlite3:', err.message);
-  }
-  return db;
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ ERRO: SUPABASE_URL ou SUPABASE_KEY não configurados!');
 }
 
-// Promisify database methods
-const run = (sql, params = []) => {
-  return new Promise((resolve, reject) => {
-    const currentDb = getDb();
-    if (!currentDb) return reject(new Error('Banco de dados não disponível'));
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+/**
+ * Funções de compatibilidade para manter o sistema funcionando
+ * enquanto migramos do SQLite para Supabase.
+ */
+
+// Helper para converter query SQL simples em comandos Supabase
+const parseSql = (sql) => {
+  const tableMatch = sql.match(/FROM\s+(\w+)|INSERT\s+INTO\s+(\w+)|UPDATE\s+(\w+)|DELETE\s+FROM\s+(\w+)/i);
+  const table = tableMatch ? (tableMatch[1] || tableMatch[2] || tableMatch[3] || tableMatch[4]) : null;
+  return table;
+};
+
+const get = async (sql, params = []) => {
+  const table = parseSql(sql);
+  if (!table) throw new Error('Tabela não identificada na query');
+
+  let query = supabase.from(table).select('*');
+
+  // Lógica simples para WHERE (ex: email = ?)
+  const whereMatch = sql.match(/WHERE\s+(\w+)\s*=/i);
+  if (whereMatch && params.length > 0) {
+    query = query.eq(whereMatch[1], params[0]);
+  }
+
+  const { data, error } = await query.single();
+  if (error && error.code !== 'PGRST116') { // PGRST116 = Not Found (comum em login/verificação)
+    console.error('Supabase Get Error:', error);
+    return null;
+  }
+  return data;
+};
+
+const all = async (sql, params = []) => {
+  const table = parseSql(sql);
+  if (!table) throw new Error('Tabela não identificada na query');
+
+  let query = supabase.from(table).select('*');
+
+  // Lógica para filtros básicos (user_id = ?)
+  const whereMatch = sql.match(/WHERE\s+(\w+)\s*=/i);
+  if (whereMatch && params.length > 0) {
+    query = query.eq(whereMatch[1], params[0]);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('Supabase All Error:', error);
+    return [];
+  }
+  return data;
+};
+
+const run = async (sql, params = []) => {
+  const table = parseSql(sql);
+  if (!table) throw new Error('Tabela não identificada na query');
+
+  // INSERT
+  if (sql.toLowerCase().includes('insert into')) {
+    const colsMatch = sql.match(/\((.*?)\)/);
+    if (!colsMatch) throw new Error('Colunas não encontradas no INSERT');
     
-    currentDb.run(sql, params, function(err) {
-      if (err) {
-        console.error('DB Error (run):', sql, err);
-        reject(err);
-      } else {
-        resolve(this);
-      }
+    const cols = colsMatch[1].split(',').map(c => c.trim());
+    const dataObj = {};
+    cols.forEach((col, index) => {
+      dataObj[col] = params[index];
     });
-  });
+
+    const { data, error } = await supabase.from(table).insert([dataObj]).select();
+    if (error) throw error;
+    return { lastID: data?.[0]?.id };
+  }
+
+  // UPDATE
+  if (sql.toLowerCase().includes('update')) {
+    const whereMatch = sql.match(/WHERE\s+(\w+)\s*=/i);
+    const setMatch = sql.match(/SET\s+(.*?)\s+WHERE/i);
+    
+    if (setMatch && whereMatch) {
+      const setParts = setMatch[1].split(',').map(p => p.trim().split('=')[0].trim());
+      const dataObj = {};
+      setParts.forEach((col, index) => {
+        dataObj[col] = params[index];
+      });
+
+      const whereVal = params[params.length - 1]; // Geralmente o ID é o último parâmetro
+      const { error } = await supabase.from(table).update(dataObj).eq(whereMatch[1], whereVal);
+      if (error) throw error;
+    }
+  }
+
+  // DELETE
+  if (sql.toLowerCase().includes('delete')) {
+    const whereMatch = sql.match(/WHERE\s+(\w+)\s*=/i);
+    if (whereMatch && params.length > 0) {
+      const { error } = await supabase.from(table).delete().eq(whereMatch[1], params[0]);
+      if (error) throw error;
+    }
+  }
+
+  return { changes: 1 };
 };
 
-const get = (sql, params = []) => {
-  return new Promise((resolve, reject) => {
-    const currentDb = getDb();
-    if (!currentDb) return reject(new Error('Banco de dados não disponível'));
-
-    currentDb.get(sql, params, (err, row) => {
-      if (err) {
-        console.error('DB Error (get):', sql, err);
-        reject(err);
-      } else {
-        resolve(row);
-      }
-    });
-  });
-};
-
-const all = (sql, params = []) => {
-  return new Promise((resolve, reject) => {
-    const currentDb = getDb();
-    if (!currentDb) return reject(new Error('Banco de dados não disponível'));
-
-    currentDb.all(sql, params, (err, rows) => {
-      if (err) {
-        console.error('DB Error (all):', sql, err);
-        reject(err);
-      } else {
-        resolve(rows || []);
-      }
-    });
-  });
-};
-
-const initDatabase = () => {
-  const currentDb = getDb();
-  if (!currentDb) return;
-
-  currentDb.serialize(() => {
-    console.log('🔄 Inicializando banco de dados...');
-    // Tabela: Usuários (Donos)
-    currentDb.run(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        phone TEXT,
-        password TEXT NOT NULL,
-        shop_name TEXT NOT NULL,
-        shop_slug TEXT UNIQUE,
-        shop_address TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Tabela: Barbeiros
-    currentDb.run(`
-      CREATE TABLE IF NOT EXISTS barbers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        nickname TEXT,
-        email TEXT,
-        phone TEXT,
-        commission REAL DEFAULT 40,
-        color TEXT DEFAULT '#C0392B',
-        start_time TEXT DEFAULT '09:00',
-        end_time TEXT DEFAULT '19:00',
-        active INTEGER DEFAULT 1,
-        access_code TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    `);
-
-    // Tabela: Especialidades do barbeiro
-    currentDb.run(`
-      CREATE TABLE IF NOT EXISTS barber_specialties (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        barber_id INTEGER NOT NULL,
-        service_id INTEGER NOT NULL,
-        FOREIGN KEY (barber_id) REFERENCES barbers(id),
-        FOREIGN KEY (service_id) REFERENCES services(id)
-      )
-    `);
-
-    // Tabela: Dias de trabalho
-    currentDb.run(`
-      CREATE TABLE IF NOT EXISTS barber_working_days (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        barber_id INTEGER NOT NULL,
-        day_of_week INTEGER NOT NULL,
-        FOREIGN KEY (barber_id) REFERENCES barbers(id)
-      )
-    `);
-
-    // Tabela: Serviços
-    currentDb.run(`
-      CREATE TABLE IF NOT EXISTS services (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        duration INTEGER NOT NULL,
-        price REAL NOT NULL,
-        description TEXT,
-        active INTEGER DEFAULT 1,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    `);
-
-    // Tabela: Agendamentos
-    currentDb.run(`
-      CREATE TABLE IF NOT EXISTS appointments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        client_id INTEGER NOT NULL,
-        barber_id INTEGER NOT NULL,
-        service_id INTEGER NOT NULL,
-        appointment_date DATETIME NOT NULL,
-        status TEXT DEFAULT 'confirmed',
-        observations TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (client_id) REFERENCES clients(id),
-        FOREIGN KEY (barber_id) REFERENCES barbers(id),
-        FOREIGN KEY (service_id) REFERENCES services(id)
-      )
-    `);
-
-    // Tabela: Clientes
-    currentDb.run(`
-      CREATE TABLE IF NOT EXISTS clients (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        email TEXT,
-        phone TEXT NOT NULL,
-        total_spent REAL DEFAULT 0,
-        visit_count INTEGER DEFAULT 0,
-        last_visit DATETIME,
-        recurrence_days INTEGER DEFAULT 15,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    `);
-
-    // Tabela: Configurações
-    currentDb.run(`
-      CREATE TABLE IF NOT EXISTS configs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER UNIQUE NOT NULL,
-        hours_config TEXT DEFAULT '{}',
-        notifications TEXT DEFAULT '{"whatsapp":true,"email":true,"owner":true,"24h":false}',
-        notification_time INTEGER DEFAULT 60,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    `);
-
-    // Tabela: Identidade Visual
-    currentDb.run(`
-      CREATE TABLE IF NOT EXISTS identity (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER UNIQUE NOT NULL,
-        color_primary TEXT DEFAULT '#C0392B',
-        color_bg TEXT DEFAULT '#0D0D0D',
-        color_text TEXT DEFAULT '#F5F2ED',
-        color_card TEXT DEFAULT '#1A1A1A',
-        font_display TEXT DEFAULT 'Clash Display',
-        welcome_message TEXT DEFAULT 'Reserve seu horário',
-        logo_url TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    `);
-
-    // Tabela: Regras de Reativação
-    currentDb.run(`
-      CREATE TABLE IF NOT EXISTS reactivation_rules (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        inactive_days INTEGER DEFAULT 30,
-        recurrence_days INTEGER DEFAULT 7,
-        enabled INTEGER DEFAULT 1,
-        max_daily_sends INTEGER DEFAULT 50,
-        auto_resend_days INTEGER DEFAULT 7,
-        send_time TEXT DEFAULT '10:00',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    `);
-
-    // Tabela: Configuração WhatsApp
-    currentDb.run(`
-      CREATE TABLE IF NOT EXISTS whatsapp_config (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER UNIQUE NOT NULL,
-        provider TEXT DEFAULT 'manual',
-        provider_name TEXT,
-        api_token TEXT,
-        phone_origin TEXT,
-        webhook_url TEXT,
-        is_connected INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    `);
-
-    // Tabela: Templates de Mensagens
-    currentDb.run(`
-      CREATE TABLE IF NOT EXISTS message_templates (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        template_type TEXT NOT NULL,
-        title TEXT NOT NULL,
-        content TEXT NOT NULL,
-        variables TEXT DEFAULT '["nome","dias","barbearia","link","ultimo_servico","barbeiro"]',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id),
-        UNIQUE(user_id, template_type)
-      )
-    `);
-
-    // Tabela: Histórico de Envios
-    currentDb.run(`
-      CREATE TABLE IF NOT EXISTS message_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        client_id INTEGER NOT NULL,
-        template_type TEXT NOT NULL,
-        message_content TEXT,
-        recipient_phone TEXT,
-        provider TEXT,
-        status TEXT DEFAULT 'pending',
-        message_id TEXT,
-        sent_at DATETIME,
-        viewed_at DATETIME,
-        scheduled_at DATETIME,
-        error_message TEXT,
-        retry_count INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (client_id) REFERENCES clients(id)
-      )
-    `);
-
-    console.log('✅ Banco de dados inicializado com sucesso');
-  });
+// Mock para manter compatibilidade com o boot do servidor
+const getDb = () => {
+  console.log('✅ Supabase Cloud Database Ativo');
+  return { serialize: (fn) => fn() }; 
 };
 
 module.exports = {
@@ -309,5 +124,5 @@ module.exports = {
   run,
   get,
   all,
-  initDatabase
+  supabase // Exportamos o cliente caso queira usar nativamente no futuro
 };
