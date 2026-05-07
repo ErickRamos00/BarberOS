@@ -88,6 +88,7 @@ const initDatabase = () => {
         start_time TEXT DEFAULT '09:00',
         end_time TEXT DEFAULT '19:00',
         active INTEGER DEFAULT 1,
+        access_code TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
       )
@@ -160,6 +161,7 @@ const initDatabase = () => {
         total_spent REAL DEFAULT 0,
         visit_count INTEGER DEFAULT 0,
         last_visit DATETIME,
+        recurrence_days INTEGER DEFAULT 15,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
       )

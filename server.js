@@ -16,6 +16,9 @@ const financeRoutes = require('./src/routes/finance');
 const reactivationRoutes = require('./src/routes/reactivation');
 const whatsappRoutes = require('./src/routes/whatsapp');
 const messageHistoryRoutes = require('./src/routes/message-history');
+const emailRoutes = require('./src/routes/email');
+const shopRoutes = require('./src/routes/shop');
+const automationRoutes = require('./src/routes/automation');
 
 const app = express();
 
@@ -49,6 +52,9 @@ app.use('/api/finance', financeRoutes);
 app.use('/api/reactivation', reactivationRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/messages', messageHistoryRoutes);
+app.use('/api/email', emailRoutes);
+app.use('/api/shop', shopRoutes);
+app.use('/api/automation', automationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -72,8 +78,8 @@ app.get('/api/status', (req, res) => {
 });
 
 // Serve frontend
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+app.get(['/', '/s/:slug'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // ===== TRATAMENTO DE ERROS =====

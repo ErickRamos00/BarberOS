@@ -7,8 +7,8 @@
   "license": "MIT",
   "scripts": {
     "start": "node server.js",
-    "dev": "NODE_ENV=development node server.js",
-    "production": "NODE_ENV=production node server.js",
+    "dev": "cross-env NODE_ENV=development node server.js",
+    "production": "cross-env NODE_ENV=production node server.js",
     "seed": "node scripts/seed.js && npm start",
     "test": "node scripts/test-api.js",
     "lint": "eslint . --ignore-pattern node_modules",
@@ -16,7 +16,8 @@
     "audit": "npm audit",
     "audit-fix": "npm audit fix",
     "backup": "node scripts/backup.js",
-    "migrate": "node scripts/migrate.js"
+    "migrate": "node scripts/migrate.js",
+    "check": "node scripts/pre-deploy.js"
   },
   "keywords": [
     "barber",
@@ -42,6 +43,7 @@
     "sqlite3": "^5.1.6"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "eslint": "^8.0.0",
     "prettier": "^3.0.0"
   },

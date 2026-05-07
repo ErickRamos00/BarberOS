@@ -19,7 +19,7 @@ const config = {
   DATABASE_PATH: process.env.DATABASE_PATH || './barber.db',
 
   // CORS
-  CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
+  CORS_ORIGIN: process.env.CORS_ORIGIN || process.env.BASE_URL || 'http://localhost:3000',
 
   // Limites
   MAX_UPLOAD_SIZE: '10mb',
