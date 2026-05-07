@@ -79,12 +79,34 @@ app.get('/api/status', (req, res) => {
 
 // Serve frontend
 app.get('*', (req, res) => {
+  // Ignorar assets comuns se não existirem
+  if (req.path.endsWith('.ico') || req.path.endsWith('.png') || req.path.endsWith('.jpg')) {
+    return res.status(404).end();
+  }
+  
   // Se for uma rota de API que não existe, retorna 404
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'API route not found' });
   }
+  
   // Para qualquer outra rota, serve o index.html (SPA)
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  const indexPath = path.join(__dirname, 'public', 'index.html');
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      // Se der erro ao servir o index, pelo menos não crasha o servidor todo
+      res.status(200).send(`
+        <html>
+          <body style="background:#0d0d0d;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
+            <div style="text-align:center;">
+              <h1>✂️ BarberOS</h1>
+              <p>O sistema está iniciando... Por favor, atualize em alguns segundos.</p>
+              <script>setTimeout(() => location.reload(), 3000)</script>
+            </div>
+          </body>
+        </html>
+      `);
+    }
+  });
 });
 
 // ===== TRATAMENTO DE ERROS =====

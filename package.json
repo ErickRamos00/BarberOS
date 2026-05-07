@@ -29,7 +29,7 @@
     "saas"
   ],
   "engines": {
-    "node": ">=14.0.0",
+    "node": "20.x",
     "npm": ">=6.0.0"
   },
   "dependencies": {
