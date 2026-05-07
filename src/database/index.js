@@ -2,23 +2,31 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const config = require('../config');
 
-const DB_PATH = config.DATABASE_PATH;
-const db = new sqlite3.Database(DB_PATH, (err) => {
-  if (err) {
-    console.error('❌ Erro ao conectar no banco:', err.message);
-    // Em produção/Vercel não matamos o processo para podermos ver logs
-  } else {
-    console.log('✅ Conectado ao banco de dados SQLite');
-  }
-});
+let isInitialized = false;
 
-// Enable foreign keys
-db.run('PRAGMA foreign_keys = ON');
+function getDb() {
+  if (db) return db;
+  
+  const DB_PATH = config.DATABASE_PATH;
+  db = new sqlite3.Database(DB_PATH, (err) => {
+    if (err) {
+      console.error('❌ Erro ao conectar no banco:', err.message);
+    } else {
+      console.log('✅ Conectado ao banco de dados SQLite');
+      db.run('PRAGMA foreign_keys = ON');
+      if (!isInitialized) {
+        isInitialized = true;
+        initDatabase();
+      }
+    }
+  });
+  return db;
+}
 
 // Promisify database methods
 const run = (sql, params = []) => {
   return new Promise((resolve, reject) => {
-    db.run(sql, params, function(err) {
+    getDb().run(sql, params, function(err) {
       if (err) {
         console.error('DB Error (run):', sql, err);
         reject(err);
@@ -31,7 +39,7 @@ const run = (sql, params = []) => {
 
 const get = (sql, params = []) => {
   return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
+    getDb().get(sql, params, (err, row) => {
       if (err) {
         console.error('DB Error (get):', sql, err);
         reject(err);
@@ -44,7 +52,7 @@ const get = (sql, params = []) => {
 
 const all = (sql, params = []) => {
   return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
+    getDb().all(sql, params, (err, rows) => {
       if (err) {
         console.error('DB Error (all):', sql, err);
         reject(err);
@@ -56,7 +64,8 @@ const all = (sql, params = []) => {
 };
 
 const initDatabase = () => {
-  db.serialize(() => {
+  const currentDb = getDb();
+  currentDb.serialize(() => {
     console.log('🔄 Inicializando banco de dados...');
     // Tabela: Usuários (Donos)
     db.run(`

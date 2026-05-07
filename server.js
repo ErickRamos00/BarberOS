@@ -39,7 +39,7 @@ app.use((req, res, next) => {
 });
 
 // ===== INICIALIZAÇÃO =====
-db.initDatabase();
+// db.initDatabase() será chamado automaticamente no primeiro acesso ao banco
 
 // ===== ROTAS =====
 app.use('/api/auth', authRoutes);
