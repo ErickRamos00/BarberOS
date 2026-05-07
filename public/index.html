@@ -48,7 +48,25 @@
         <button class="btn-full" onclick="handleLogin()">Entrar</button>
         <div class="auth-divider"><span>ou</span></div>
         <button class="btn-full btn-outline" onclick="showForm('form-register')">Criar conta grátis</button>
-        <p class="auth-switch">Demo rápido? <a href="#" onclick="loginDemo()">Entrar como dono</a> | <a href="#" onclick="loginDemoClient()">Entrar como cliente</a></p>
+        <p class="auth-switch">Barbeiro? <a href="#" onclick="showForm('form-barber-login')">Entre aqui</a></p>
+        <p class="auth-switch">Demo rápido? <a href="#" onclick="loginDemo()">Dono</a> | <a href="#" onclick="loginDemoClient()">Cliente</a></p>
+      </div>
+
+      <!-- BARBER LOGIN FORM -->
+      <div id="form-barber-login" class="auth-form">
+        <h2>Painel do Barbeiro</h2>
+        <p class="form-sub">Acesse sua agenda profissional</p>
+        <div class="field-group">
+          <label>E-mail</label>
+          <input type="email" id="barber-login-email" placeholder="seu@email.com" />
+        </div>
+        <div class="field-group">
+          <label>Código de Acesso</label>
+          <input type="text" id="barber-login-code" placeholder="6 dígitos" />
+        </div>
+        <button class="btn-full" onclick="handleBarberLogin()">Entrar na Agenda</button>
+        <div class="auth-divider"><span>ou</span></div>
+        <p class="auth-switch">É dono da barbearia? <a href="#" onclick="showForm('form-login')">Login administrativo</a></p>
       </div>
 
       <!-- REGISTER FORM -->
@@ -179,7 +197,7 @@
           <div class="kpi-body">
             <span class="kpi-label">Agendamentos hoje</span>
             <span class="kpi-val" id="kpi-today">0</span>
-            <span class="kpi-change positive">↑ 3 vs ontem</span>
+            <span class="kpi-change" id="kpi-today-change">—</span>
           </div>
         </div>
         <div class="kpi-card">
@@ -187,7 +205,7 @@
           <div class="kpi-body">
             <span class="kpi-label">Receita hoje</span>
             <span class="kpi-val" id="kpi-revenue">R$ 0</span>
-            <span class="kpi-change positive">↑ 12%</span>
+            <span class="kpi-change" id="kpi-revenue-change">—</span>
           </div>
         </div>
         <div class="kpi-card">
@@ -195,7 +213,7 @@
           <div class="kpi-body">
             <span class="kpi-label">Clientes novos</span>
             <span class="kpi-val" id="kpi-new-clients">0</span>
-            <span class="kpi-change">este mês</span>
+            <span class="kpi-change" id="kpi-new-clients-change">este mês</span>
           </div>
         </div>
         <div class="kpi-card">
@@ -203,7 +221,7 @@
           <div class="kpi-body">
             <span class="kpi-label">Taxa ocupação</span>
             <span class="kpi-val" id="kpi-ocupacao">0%</span>
-            <span class="kpi-change positive">↑ 5%</span>
+            <span class="kpi-change" id="kpi-ocupacao-change">—</span>
           </div>
         </div>
       </div>
@@ -789,5 +807,7 @@
 
 <script src="api.js"></script>
 <script src="app.js"></script>
+<script src="helpers.js"></script>
+<script src="booking-functions.js"></script>
 </body>
 </html>
