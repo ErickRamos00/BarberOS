@@ -9,11 +9,12 @@ let supabase;
 try {
   if (supabaseUrl && supabaseKey) {
     supabase = createClient(supabaseUrl, supabaseKey);
+    console.log('📡 Cliente Supabase criado com sucesso');
   } else {
-    console.error('⚠️ AVISO: SUPABASE_URL ou SUPABASE_KEY não configurados!');
+    console.error('⚠️ AVISO: SUPABASE_URL ou SUPABASE_KEY ausentes nas variáveis da Vercel!');
   }
 } catch (err) {
-  console.error('❌ Erro ao criar cliente Supabase:', err.message);
+  console.error('❌ Erro catastrófico ao criar cliente Supabase:', err.message);
 }
 
 /**
@@ -50,8 +51,12 @@ const get = async (sql, params = []) => {
 };
 
 const all = async (sql, params = []) => {
-  if (!supabase) return [];
+  if (!supabase) {
+    console.error('❌ Supabase não inicializado para ALL');
+    return [];
+  }
   const table = parseSql(sql);
+  console.log(`🔍 Supabase ALL [${table}] - Params:`, params);
   if (!table) throw new Error('Tabela não identificada na query');
 
   let query = supabase.from(table).select('*');
@@ -71,8 +76,12 @@ const all = async (sql, params = []) => {
 };
 
 const run = async (sql, params = []) => {
-  if (!supabase) return { lastID: 0, changes: 0 };
+  if (!supabase) {
+    console.error('❌ Supabase não inicializado para RUN');
+    return { lastID: 0, changes: 0 };
+  }
   const table = parseSql(sql);
+  console.log(`📝 Supabase RUN [${table}] - Params:`, params);
   if (!table) throw new Error('Tabela não identificada na query');
 
   // INSERT
