@@ -1026,21 +1026,30 @@ function copyLink() {
 
 // ===== IDENTITY =====
 function applyBrandColors() {
-  const primary = document.getElementById('color-primary').value;
-  const bg = document.getElementById('color-bg').value;
-  const text = document.getElementById('color-text').value;
-  const card = document.getElementById('color-card').value;
-  document.getElementById('color-primary-val').textContent = primary;
-  document.getElementById('color-bg-val').textContent = bg;
-  document.getElementById('color-text-val').textContent = text;
-  document.getElementById('color-card-val').textContent = card;
-  DB.identity = { ...DB.identity, primary, bg, text, card };
+  const color_primary = document.getElementById('color-primary').value;
+  const color_bg = document.getElementById('color-bg').value;
+  const color_text = document.getElementById('color-text').value;
+  const color_card = document.getElementById('color-card').value;
+  
+  document.getElementById('color-primary-val').textContent = color_primary;
+  document.getElementById('color-bg-val').textContent = color_bg;
+  document.getElementById('color-text-val').textContent = color_text;
+  document.getElementById('color-card-val').textContent = color_card;
+  
+  DB.identity = { ...DB.identity, color_primary, color_bg, color_text, color_card };
+  
   const preview = document.getElementById('booking-preview');
-  preview.style.background = bg;
-  preview.style.color = text;
-  preview.querySelectorAll('.bp-svc.active, .bp-barber.active').forEach(el=>{ el.style.borderColor=primary; el.style.color=primary; });
-  preview.querySelectorAll('.bp-logo-area').forEach(el=>el.style.background=primary);
-  document.getElementById('bp-shop-name').style.color = text;
+  if (preview) {
+    preview.style.background = color_bg;
+    preview.style.color = color_text;
+    preview.querySelectorAll('.bp-svc.active, .bp-barber.active').forEach(el => { 
+      el.style.borderColor = color_primary; 
+      el.style.color = color_primary; 
+    });
+    preview.querySelectorAll('.bp-logo-area').forEach(el => el.style.background = color_primary);
+    const shopNameEl = document.getElementById('bp-shop-name');
+    if (shopNameEl) shopNameEl.style.color = color_text;
+  }
 }
 
 const themes = {
@@ -1317,18 +1326,11 @@ function applyIdentity() {
   const root = document.documentElement;
   const id = DB.identity;
   
-  // Map identity fields from DB (color_*) or local (primary, bg, etc) to CSS variables
-  const primary = id.color_primary || id.primary;
-  const bg = id.color_bg || id.bg;
-  const text = id.color_text || id.text;
-  const card = id.color_card || id.card;
-  const font = id.font_display || id.fontDisplay;
-
-  if (primary) root.style.setProperty('--primary', primary);
-  if (bg) root.style.setProperty('--bg', bg);
-  if (text) root.style.setProperty('--text', text);
-  if (card) root.style.setProperty('--card', card);
-  if (font) root.style.setProperty('--font-display', font);
+  if (id.color_primary) root.style.setProperty('--primary', id.color_primary);
+  if (id.color_bg) root.style.setProperty('--bg', id.color_bg);
+  if (id.color_text) root.style.setProperty('--text', id.color_text);
+  if (id.color_card) root.style.setProperty('--card', id.color_card);
+  if (id.font_display) root.style.setProperty('--font-display', id.font_display);
   
   if (DB.shop) {
     const sbShop = document.getElementById('sb-shop-name');
