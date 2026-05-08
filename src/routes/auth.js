@@ -163,6 +163,10 @@ router.get('/me', verifyToken, async (req, res) => {
       'SELECT id, name, email, phone, shop_name, shop_slug, shop_address FROM users WHERE id = ?',
       [req.userId]
     );
+
+    if (!user) {
+      return res.status(401).json({ error: 'Sessão inválida ou usuário não encontrado' });
+    }
     
     res.json({
       user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: 'owner' },
