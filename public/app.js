@@ -201,83 +201,49 @@ function simulateSendEmail(to, subject, body) {
 
 // Carrega todos os dados do usuÃ¡rio do banco de dados
 async function loadUserData() {
+  // 1. Restaurar perfil do usuário e loja (Essencial)
+  const profile = await apiGetUser();
+  DB.user = profile.user;
+  DB.shop = profile.shop;
+
+  if (!DB.user || !DB.shop) {
+    throw new Error('Sessão inválida ou dados da barbearia não encontrados');
+  }
+
+  // 2. Carregar barbeiros
+  try { DB.barbers = await apiGetBarbers(); } catch (e) { console.warn('Barbers load error:', e); DB.barbers = []; }
+  
+  // 3. Carregar serviços
+  try { DB.services = await apiGetServices(); } catch (e) { console.warn('Services load error:', e); DB.services = []; }
+  
+  // 4. Carregar clientes
+  try { DB.clients = await apiGetClients(); } catch (e) { console.warn('Clients load error:', e); DB.clients = []; }
+  
+  // 5. Carregar agendamentos
+  try { DB.appointments = await apiGetAppointments(); } catch (e) { console.warn('Appointments load error:', e); DB.appointments = []; }
+  
+  // 6. Carregar configurações e Identidade
   try {
-    // Restaurar perfil do usuário e loja
-    const profile = await apiGetUser();
-    DB.user = profile.user;
-    DB.shop = profile.shop;
+    const cfg = await apiGetConfig();
+    const idtf = await apiGetIdentity();
+    if (idtf) DB.identity = { ...DB.identity, ...idtf };
+    
+    // Normalizar horários (merge com default)
+    const defaultHours = {
+      0: { open: false, start: '09:00', end: '19:00' },
+      1: { open: true,  start: '09:00', end: '19:00' },
+      2: { open: true,  start: '09:00', end: '19:00' },
+      3: { open: true,  start: '09:00', end: '19:00' },
+      4: { open: true,  start: '09:00', end: '19:00' },
+      5: { open: true,  start: '09:00', end: '19:00' },
+      6: { open: true,  start: '09:00', end: '17:00' },
+    };
+    DB.hours = cfg.hours_config ? { ...defaultHours, ...cfg.hours_config } : defaultHours;
 
-    // Carregar barbeiros
-    try {
-      DB.barbers = await apiGetBarbers();
-    } catch (e) {
-      console.warn('Erro ao carregar barbers:', e);
-      DB.barbers = [];
-    }
-    
-    // Carregar serviÃ§os
-    try {
-      DB.services = await apiGetServices();
-    } catch (e) {
-      console.warn('Erro ao carregar services:', e);
-      DB.services = [];
-    }
-    
-    // Carregar clientes
-    try {
-      DB.clients = await apiGetClients();
-    } catch (e) {
-      console.warn('Erro ao carregar clients:', e);
-      DB.clients = [];
-    }
-    
-    // Carregar agendamentos
-    try {
-      DB.appointments = await apiGetAppointments();
-    } catch (e) {
-      console.warn('Erro ao carregar appointments:', e);
-      DB.appointments = [];
-    }
-    
-    // Carregar configurações
-    try {
-      const cfg = await apiGetConfig();
-      if (cfg.hours_config) {
-        // Fazer merge seguro para garantir que todos os 7 dias existem
-        const defaultHours = {
-          0: { open: false, start: '09:00', end: '19:00' },
-          1: { open: true,  start: '09:00', end: '19:00' },
-          2: { open: true,  start: '09:00', end: '19:00' },
-          3: { open: true,  start: '09:00', end: '19:00' },
-          4: { open: true,  start: '09:00', end: '19:00' },
-          5: { open: true,  start: '09:00', end: '19:00' },
-          6: { open: true,  start: '09:00', end: '17:00' },
-        };
-        DB.hours = { ...defaultHours, ...cfg.hours_config };
-      }
-    } catch (e) {
-      console.warn('Erro ao carregar config:', e);
-    }
-    
-    // Carregar identidade visual
-    try {
-      const idtf = await apiGetIdentity();
-      if (idtf) DB.identity = { ...DB.identity, ...idtf };
-    } catch (e) {
-      console.warn('Erro ao carregar identidade:', e);
-    }
-
-    // Carregar dados do perfil (Eu)
-    const userData = await apiGetUser();
-    if (!userData || !userData.user) throw new Error('Falha ao obter perfil do usuário');
-    
-    DB.user = userData.user;
-    DB.shop = userData.shop || DB.shop;
-    
-    if (!DB.shop) throw new Error('Dados da barbearia não encontrados');
-  } catch (err) {
-    console.error('Erro ao carregar dados do usuário:', err);
-    seedData();
+    // APLICAR VISUAL IMEDIATAMENTE (LOGO E CORES)
+    applyIdentity();
+  } catch (e) {
+    console.warn('Config/Identity load error:', e);
   }
 }
 
@@ -1422,27 +1388,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (typeof isAuthenticated === 'function' && isAuthenticated()) {
     try {
-      // Tentar carregar dados (isso já valida o token via apiGetUser dentro do loadUserData)
+      // Mostrar tela de loading se preferir, ou manter a atual
       await loadUserData();
       
-      if (DB.user && DB.user.role === 'barber') {
-        enterBarber();
+      if (DB.user) {
+        if (DB.user.role === 'barber') {
+          enterBarber();
+        } else {
+          enterOwner();
+        }
       } else {
-        enterOwner();
+        // Fallback: Se carregou mas não tem usuário, algo está errado
+        localStorage.removeItem('token');
+        showScreen('auth-screen');
+        showForm('form-login');
       }
     } catch (err) {
       console.error('Session restoration failed:', err);
-      // Se falhou por 401 (token expirado/invalido), aí sim logar fora
-      if (err.status === 401 || err.message.includes('401')) {
+      // Se for erro de autenticação (401), remover token e ir para login
+      if (err.status === 401 || (err.message && err.message.includes('401'))) {
         localStorage.removeItem('token');
         showScreen('auth-screen');
         showForm('form-login');
       } else {
-        // Outro erro (rede, etc), tentar manter na tela mas avisar
-        toast('Conexão instável. Algumas funções podem não funcionar.', 'warning');
-        if (DB.user) {
-          DB.user.role === 'barber' ? enterBarber() : enterOwner();
-        }
+        // Outro erro (rede, banco), avisar mas não necessariamente expulsar se houver cache
+        toast('Erro ao conectar. Tente atualizar a página.', 'error');
+        showScreen('auth-screen');
+        showForm('form-login');
       }
     }
   } else {
