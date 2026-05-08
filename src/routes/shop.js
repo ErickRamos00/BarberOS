@@ -25,11 +25,19 @@ router.get('/:slug', async (req, res) => {
       [shop.id]
     );
 
-    // Obter barbeiros (apenas ativos)
+    // Obter barbeiros (apenas ativos) com seus horários específicos
     const barbers = await all(
       'SELECT id, name, nickname, color, start_time, end_time FROM barbers WHERE user_id = ? AND active = 1',
       [shop.id]
     );
+
+    for (let barber of barbers) {
+      const workingDays = await all(
+        'SELECT day_of_week, start_time, end_time, is_working FROM barber_working_days WHERE barber_id = ?',
+        [barber.id]
+      );
+      barber.working_days = workingDays;
+    }
 
     // Obter serviços
     const services = await all(
@@ -37,7 +45,7 @@ router.get('/:slug', async (req, res) => {
       [shop.id]
     );
 
-    // Obter configurações (horas de funcionamento)
+    // Obter configurações (horas de funcionamento da loja)
     const config = await get(
       'SELECT hours_config FROM configs WHERE user_id = ?',
       [shop.id]

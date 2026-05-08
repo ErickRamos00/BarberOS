@@ -238,26 +238,20 @@ window.renderBkServices = function() {
 window.renderBkBarbers = function() {
   var svcId = DB.booking.service;
   var eligible = svcId ? DB.barbers.filter(function(b) {
-    var svc = DB.services.find(function(s) { return s.id === svcId; });
-    return !svc || !svc.barbers || !svc.barbers.length || svc.barbers.includes(b.id);
+    var svc = DB.services.find(function(s) { return String(s.id) === String(svcId); });
+    return !svc || !svc.barbers || !svc.barbers.length || svc.barbers.map(String).includes(String(b.id));
   }) : DB.barbers;
 
   var container = document.getElementById('bk-barbers-list');
   if (!container) return;
 
-  container.innerHTML =
-    '<div class="bk-any-card ' + (DB.booking.barber === null ? 'selected' : '') + '" onclick="selectBarber(null,this)">' +
-      '<div class="bk-any-icon">🎲</div>' +
-      '<div class="bk-barber-name">Qualquer barbeiro</div>' +
-      '<div class="bk-barber-spec">Primeiro disponível</div>' +
-    '</div>' +
-    eligible.map(function(b) {
-      return '<div class="bk-barber-card ' + (DB.booking.barber === b.id ? 'selected' : '') + '" onclick="selectBarber(\'' + b.id + '\',this)" data-id="' + b.id + '">' +
-        '<div class="bk-barber-av" style="background:' + (b.color || 'var(--primary)') + '">' + initials(b.name) + '</div>' +
-        '<div class="bk-barber-name">' + b.name + '</div>' +
-        '<div class="bk-barber-spec">' + (b.nick || '') + '</div>' +
-      '</div>';
-    }).join('');
+  container.innerHTML = eligible.map(function(b) {
+    return '<div class="bk-barber-card ' + (String(DB.booking.barber) === String(b.id) ? 'selected' : '') + '" onclick="selectBarber(\'' + b.id + '\',this)" data-id="' + b.id + '">' +
+      '<div class="bk-barber-av" style="background:' + (b.color || 'var(--primary)') + '">' + initials(b.name) + '</div>' +
+      '<div class="bk-barber-name">' + b.name + '</div>' +
+      '<div class="bk-barber-spec">' + (b.nick || '') + '</div>' +
+    '</div>';
+  }).join('');
 };
 
 // ===== FIX refreshBarberSelects ENCODING =====

@@ -202,7 +202,12 @@ function simulateSendEmail(to, subject, body) {
 // Carrega todos os dados do usuÃ¡rio do banco de dados
 async function loadUserData() {
   try {
-    // Carregar barbers
+    // Restaurar perfil do usuário e loja
+    const profile = await apiGetUser();
+    DB.user = profile.user;
+    DB.shop = profile.shop;
+
+    // Carregar barbeiros
     try {
       DB.barbers = await apiGetBarbers();
     } catch (e) {
@@ -343,9 +348,11 @@ function enterClient() {
 }
 
 function logout() {
-  DB.user = null; DB.shop = null;
-  showScreen('auth-screen');
-  showForm('form-login');
+  localStorage.removeItem('token');
+  DB.user = null; 
+  DB.shop = null;
+  // Recarregar para garantir limpeza total do estado
+  window.location.href = '/';
 }
 
 // ===== SCREENS =====

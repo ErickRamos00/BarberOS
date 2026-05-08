@@ -36,8 +36,19 @@ function renderBkCalendar() {
     var isToday = dateStr === todayStr;
     var isSelected = DB.booking.date === dateStr;
     var dayOfWeek = date.getDay();
-    var hoursConfig = DB.hours[dayOfWeek];
-    var isClosed = hoursConfig && !hoursConfig.open;
+    
+    // Logica inteligente: Ver se o barbeiro trabalha nesse dia
+    var barber = DB.booking.barber ? DB.barbers.find(b => String(b.id) === String(DB.booking.barber)) : null;
+    var isClosed = false;
+
+    if (barber && barber.working_days && barber.working_days.length > 0) {
+      const workingDay = barber.working_days.find(d => Number(d.day_of_week) === dayOfWeek);
+      isClosed = !workingDay || workingDay.is_working === false;
+    } else {
+      // Fallback para horário da loja
+      var hoursConfig = DB.hours[dayOfWeek];
+      isClosed = hoursConfig && !hoursConfig.open;
+    }
 
     var classes = 'cal-day';
     if (isPast || isClosed) classes += ' disabled';
