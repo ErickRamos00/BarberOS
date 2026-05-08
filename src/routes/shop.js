@@ -1,5 +1,6 @@
 const express = require('express');
 const { run, get, all } = require('../database');
+const { sendAppointmentConfirmation } = require('../services/email');
 
 const router = express.Router();
 
@@ -83,9 +84,29 @@ router.post('/:slug/book', async (req, res) => {
     const appointmentDate = `${date} ${time}`;
     const result = await run(
       `INSERT INTO appointments (user_id, client_id, barber_id, service_id, appointment_date, status, observations)
-       VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
+       VALUES (?, ?, ?, ?, ?, 'confirmed', ?)`,
       [shop.id, clientObj.id, barber, service, appointmentDate, obs]
     );
+
+    // 3. Enviar email de confirmação
+    if (email) {
+      try {
+        const svcObj = await get('SELECT name FROM services WHERE id = ?', [service]);
+        const barbObj = await get('SELECT name FROM barbers WHERE id = ?', [barber]);
+        const shopObj = await get('SELECT shop_name FROM users WHERE id = ?', [shop.id]);
+        
+        await sendAppointmentConfirmation(email, {
+          clientName: client,
+          service: svcObj ? svcObj.name : 'Serviço',
+          barber: barbObj ? barbObj.name : 'Qualquer disponível',
+          date: new Date(date + 'T12:00:00').toLocaleDateString('pt-BR'),
+          time: time,
+          shopName: shopObj ? shopObj.shop_name : 'Barbearia'
+        });
+      } catch (e) {
+        console.error('Erro ao enviar email de confirmação pública:', e);
+      }
+    }
 
     res.status(201).json({ 
       message: 'Agendamento solicitado com sucesso!',
