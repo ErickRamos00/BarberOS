@@ -87,7 +87,7 @@ router.put('/identity/update', async (req, res) => {
   try {
     const { color_primary, color_bg, color_text, color_card, font_display, welcome_message, logo_url } = req.body;
     
-    await run(
+    const result = await run(
       `UPDATE identity SET 
         color_primary = ?, 
         color_bg = ?, 
@@ -100,6 +100,15 @@ router.put('/identity/update', async (req, res) => {
        WHERE user_id = ?`,
       [color_primary, color_bg, color_text, color_card, font_display, welcome_message, logo_url, req.userId]
     );
+
+    // Se não atualizou nada (não existia a linha), criar agora
+    if (result.changes === 0) {
+      await run(
+        `INSERT INTO identity (user_id, color_primary, color_bg, color_text, color_card, font_display, welcome_message, logo_url)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [req.userId, color_primary, color_bg, color_text, color_card, font_display, welcome_message, logo_url]
+      );
+    }
 
     const identity = await get('SELECT * FROM identity WHERE user_id = ?', [req.userId]);
     res.json({ message: 'Identidade visual atualizada', identity });
