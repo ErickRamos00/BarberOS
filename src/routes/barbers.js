@@ -120,8 +120,8 @@ router.post('/', async (req, res) => {
     if (working_days && working_days.length) {
       for (let day of working_days) {
         await run(
-          'INSERT INTO barber_working_days (barber_id, day_of_week) VALUES (?, ?)',
-          [barberId, day]
+          'INSERT INTO barber_working_days (barber_id, day_of_week, start_time, end_time) VALUES (?, ?, ?, ?)',
+          [barberId, day, start_time, end_time]
         );
       }
     }
