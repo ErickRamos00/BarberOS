@@ -1339,12 +1339,19 @@ function applyIdentity() {
     // Logo Dinâmico
     const logoContainer = document.getElementById('sb-logo-container');
     if (logoContainer) {
-      if (id.logo_url) {
-        logoContainer.innerHTML = `<img src="${id.logo_url}" style="width:100%;height:100%;object-fit:contain;border-radius:6px">`;
+      if (id.logo_url && id.logo_url.trim() !== '') {
+        logoContainer.innerHTML = `
+          <img src="${id.logo_url}" 
+               style="width:100%; height:100%; object-fit:contain; border-radius:6px; display:block;" 
+               onerror="this.parentElement.innerHTML='✂'; this.parentElement.style.background='var(--primary)';" />
+        `;
         logoContainer.style.background = 'transparent';
+        logoContainer.style.padding = '0';
+        logoContainer.style.overflow = 'hidden';
       } else {
         logoContainer.innerHTML = '✂';
         logoContainer.style.background = 'var(--primary)';
+        logoContainer.style.padding = '';
       }
     }
   }
