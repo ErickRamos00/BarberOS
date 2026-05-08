@@ -154,13 +154,26 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
     background: rgba(18,18,20,0.98);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
+    transform: none !important;
   }
-  .sidebar-top, .sb-divider, .sb-plan { display: none !important; }
-  .sb-nav { flex-direction: row; justify-content: space-around; padding: 0.5rem; width: 100%; overflow: visible; }
+  .sidebar-top, .sb-divider, .sb-plan, .sb-label { display: none !important; }
+  .sb-nav { flex-direction: row; justify-content: space-around; padding: 0.5rem; width: 100%; overflow: visible; gap: 0; }
   .sb-footer { border: none; padding: 0; display: flex; align-items: center; }
-  .sb-item { flex-direction: column; gap: 4px; padding: 8px; font-size: 0.6rem; text-align: center; min-width: 60px; }
-  .sb-icon { font-size: 1.1rem; }
-  .main-content { padding-bottom: 80px; }
+  .sb-item { flex-direction: column; gap: 4px; padding: 8px; font-size: 0.65rem; text-align: center; min-width: 60px; width: auto; }
+  .sb-icon { font-size: 1.2rem; margin: 0; }
+  .main-content { padding-bottom: 80px; margin-left: 0 !important; }
+}
+
+/* COLLAPSED STATE (Desktop) */
+@media (min-width: 769px) {
+  .sidebar.collapsed { width: 72px; min-width: 72px; }
+  .sidebar.collapsed .sb-label, 
+  .sidebar.collapsed .sb-shop-info, 
+  .sidebar.collapsed .sb-plan { display: none; }
+  .sidebar.collapsed .sb-item { justify-content: center; padding: 0.75rem; }
+  .sidebar.collapsed .sb-icon { font-size: 1.2rem; margin: 0; }
+  .sidebar.collapsed .sidebar-top { padding: 1rem 0.5rem; justify-content: center; }
+  .sidebar.collapsed .sb-toggle { transform: rotate(180deg); }
 }
 
 .sidebar-top {

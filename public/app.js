@@ -1369,6 +1369,18 @@ function applyIdentity() {
     if (sbShop) sbShop.textContent = DB.shop.name;
     const bkShop = document.getElementById('bk-shop-name');
     if (bkShop) bkShop.textContent = DB.shop.name;
+
+    // Logo Dinâmico
+    const logoContainer = document.getElementById('sb-logo-container');
+    if (logoContainer) {
+      if (id.logo_url) {
+        logoContainer.innerHTML = `<img src="${id.logo_url}" style="width:100%;height:100%;object-fit:contain;border-radius:6px">`;
+        logoContainer.style.background = 'transparent';
+      } else {
+        logoContainer.innerHTML = '✂';
+        logoContainer.style.background = 'var(--primary)';
+      }
+    }
   }
   
   const welcome = id.welcome_message || id.welcome;
@@ -1404,26 +1416,39 @@ function copyLink() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  initSaaS().then(isSaaS => {
-    if (!isSaaS) {
-      if (typeof isAuthenticated === 'function' && isAuthenticated()) {
-        loadUserData().then(() => {
-          if (DB.user && DB.user.role === 'barber') {
-            enterBarber();
-          } else {
-            enterOwner();
-          }
-        }).catch(() => {
-          showScreen('auth-screen');
-          showForm('form-login');
-        });
+document.addEventListener('DOMContentLoaded', async () => {
+  const isSaaS = await initSaaS();
+  if (isSaaS) return;
+
+  if (typeof isAuthenticated === 'function' && isAuthenticated()) {
+    try {
+      // Tentar carregar dados (isso já valida o token via apiGetUser dentro do loadUserData)
+      await loadUserData();
+      
+      if (DB.user && DB.user.role === 'barber') {
+        enterBarber();
       } else {
+        enterOwner();
+      }
+    } catch (err) {
+      console.error('Session restoration failed:', err);
+      // Se falhou por 401 (token expirado/invalido), aí sim logar fora
+      if (err.status === 401 || err.message.includes('401')) {
+        localStorage.removeItem('token');
         showScreen('auth-screen');
         showForm('form-login');
+      } else {
+        // Outro erro (rede, etc), tentar manter na tela mas avisar
+        toast('Conexão instável. Algumas funções podem não funcionar.', 'warning');
+        if (DB.user) {
+          DB.user.role === 'barber' ? enterBarber() : enterOwner();
+        }
       }
     }
-  });
+  } else {
+    showScreen('auth-screen');
+    showForm('form-login');
+  }
 });
 
 
