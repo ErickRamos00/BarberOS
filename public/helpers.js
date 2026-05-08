@@ -357,6 +357,8 @@ window.changePassword = async function() {
 // ===== BACKEND-CONNECTED saveIdentity =====
 window.saveIdentity = async function() {
   DB.identity.welcome = (document.getElementById('cfg-welcome') || {}).value || DB.identity.welcome;
+  DB.identity.logo_url = (document.getElementById('cfg-logo-url') || {}).value || DB.identity.logo_url;
+  
   try {
     await apiSaveIdentity({
       color_primary: DB.identity.primary,
@@ -364,10 +366,13 @@ window.saveIdentity = async function() {
       color_text: DB.identity.text,
       color_card: DB.identity.card,
       font_display: DB.identity.fontDisplay,
-      welcome_message: DB.identity.welcome
+      welcome_message: DB.identity.welcome,
+      logo_url: DB.identity.logo_url
     });
+    
     if (document.getElementById('bk-shop-sub')) document.getElementById('bk-shop-sub').textContent = DB.identity.welcome;
     applyThemeToBooking();
+    applyIdentity(); // Forçar atualização do logo na sidebar
     toast('✓ Identidade visual salva e publicada!', 'success');
   } catch (err) {
     toast('✗ Erro ao salvar: ' + err.message, 'error');

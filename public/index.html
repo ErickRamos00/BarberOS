@@ -471,13 +471,10 @@
           </div>
           <div class="settings-card">
             <h3>Logo e Imagem</h3>
-            <div class="logo-upload" onclick="document.getElementById('logo-input').click()">
-              <div id="logo-preview-wrap">
-                <span class="upload-icon">🖼</span>
-                <p>Clique para enviar logo</p>
-                <p class="upload-sub">PNG, JPG · até 2MB</p>
-              </div>
-              <input type="file" id="logo-input" accept="image/*" style="display:none" onchange="previewLogo(event)" />
+            <div class="field-group">
+              <label>Link do Logo (URL direta da imagem)</label>
+              <input type="text" id="cfg-logo-url" placeholder="https://exemplo.com/seu-logo.png" oninput="applyIdentity()" />
+              <p class="field-help" style="font-size:0.75rem; color:var(--text-faint); margin-top:0.5rem">Recomendado: Imagem quadrada em formato PNG com fundo transparente.</p>
             </div>
             <div class="field-group" style="margin-top:1rem">
               <label>Mensagem de boas-vindas (tela de agendamento)</label>
