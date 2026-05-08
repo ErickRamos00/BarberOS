@@ -1338,24 +1338,26 @@ function applyIdentity() {
     const bkShop = document.getElementById('bk-shop-name');
     if (bkShop) bkShop.textContent = DB.shop.name;
 
-    // Logo Dinâmico
-    const logoContainer = document.getElementById('sb-logo-container');
-    if (logoContainer) {
-      if (id.logo_url && id.logo_url.trim() !== '') {
-        logoContainer.innerHTML = `
-          <img src="${id.logo_url}" 
-               style="width:100%; height:100%; object-fit:contain; border-radius:6px; display:block;" 
-               onerror="this.parentElement.innerHTML='✂'; this.parentElement.style.background='var(--primary)';" />
-        `;
-        logoContainer.style.background = 'transparent';
-        logoContainer.style.padding = '0';
-        logoContainer.style.overflow = 'hidden';
-      } else {
-        logoContainer.innerHTML = '✂';
-        logoContainer.style.background = 'var(--primary)';
-        logoContainer.style.padding = '';
+    // Logo Dinâmico (Sidebar e Booking)
+    const containers = [document.getElementById('sb-logo-container'), document.getElementById('bk-logo')];
+    containers.forEach(container => {
+      if (container) {
+        if (id.logo_url && id.logo_url.trim() !== '') {
+          container.innerHTML = `
+            <img src="${id.logo_url}" 
+                 style="width:100%; height:100%; object-fit:contain; border-radius:6px; display:block;" 
+                 onerror="handleLogoError(this)" />
+          `;
+          container.style.background = 'transparent';
+          container.style.padding = '0';
+          container.style.overflow = 'hidden';
+        } else {
+          container.innerHTML = '✂';
+          container.style.background = 'var(--primary)';
+          container.style.padding = '';
+        }
       }
-    }
+    });
   }
   
   const welcome = id.welcome_message || id.welcome;
@@ -1364,6 +1366,16 @@ function applyIdentity() {
     if (bkSub) bkSub.textContent = welcome;
   }
 }
+
+// Global helper para erro de logo
+window.handleLogoError = function(img) {
+  const parent = img.parentElement;
+  if (parent) {
+    parent.innerHTML = '✂';
+    parent.style.background = 'var(--primary)';
+    parent.style.padding = '';
+  }
+};
 
 function updateShopLink() {
   const linkEl = document.getElementById('shop-link');
