@@ -356,23 +356,28 @@ window.changePassword = async function() {
 
 // ===== BACKEND-CONNECTED saveIdentity =====
 window.saveIdentity = async function() {
-  DB.identity.welcome = (document.getElementById('cfg-welcome') || {}).value || DB.identity.welcome;
-  DB.identity.logo_url = (document.getElementById('cfg-logo-url') || {}).value || DB.identity.logo_url;
+  const welcome = (document.getElementById('cfg-welcome') || {}).value;
+  const logo = (document.getElementById('cfg-logo-url') || {}).value;
+  const font = (document.getElementById('cfg-font') || document.getElementById('font-display') || {}).value;
+  
+  if (welcome) DB.identity.welcome_message = welcome;
+  if (logo) DB.identity.logo_url = logo;
+  if (font) DB.identity.font_display = font;
   
   try {
     await apiSaveIdentity({
-      color_primary: DB.identity.primary,
-      color_bg: DB.identity.bg,
-      color_text: DB.identity.text,
-      color_card: DB.identity.card,
-      font_display: DB.identity.fontDisplay,
-      welcome_message: DB.identity.welcome,
+      color_primary: DB.identity.color_primary,
+      color_bg: DB.identity.color_bg,
+      color_text: DB.identity.color_text,
+      color_card: DB.identity.color_card,
+      font_display: DB.identity.font_display,
+      welcome_message: DB.identity.welcome_message,
       logo_url: DB.identity.logo_url
     });
     
-    if (document.getElementById('bk-shop-sub')) document.getElementById('bk-shop-sub').textContent = DB.identity.welcome;
+    if (document.getElementById('bk-shop-sub')) document.getElementById('bk-shop-sub').textContent = DB.identity.welcome_message;
     applyThemeToBooking();
-    applyIdentity(); // Forçar atualização do logo na sidebar
+    applyIdentity(); // Atualizar tudo imediatamente
     toast('✓ Identidade visual salva e publicada!', 'success');
   } catch (err) {
     toast('✗ Erro ao salvar: ' + err.message, 'error');
