@@ -529,9 +529,12 @@ function renderBarbers() {
 
 function copyBarberLink(id) {
   if (!DB.shop || !DB.shop.slug) return toast('Erro: Barbearia não identificada', 'error');
-  const url = `${window.location.origin}/s/${DB.shop.slug}?barber=${id}`;
+  const b = DB.barbers.find(x => String(x.id) === String(id));
+  if (!b) return toast('Barbeiro não encontrado', 'error');
+  const barberId = b.slug || b.id;
+  const url = `${window.location.origin}/s/${DB.shop.slug}?barber=${barberId}`;
   navigator.clipboard.writeText(url).then(() => {
-    toast('✓ Link do barbeiro copiado para o clipboard!', 'success');
+    toast('✓ Link do barbeiro ' + (b.nick || b.name) + ' copiado!', 'success');
   });
 }
 
@@ -585,8 +588,9 @@ function saveBarber() {
   const days = [...document.querySelectorAll('#barber-days input:checked')].map(c=>parseInt(c.value));
   // Agora pega os IDs dos serviços
   const specialties = [...document.querySelectorAll('#specialty-checks input:checked')].map(c=>parseInt(c.value));
+  const slug = (nick || name).toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
   const data = {
-    name, nick,
+    name, nick, slug,
     phone: document.getElementById('barber-phone').value,
     email: document.getElementById('barber-email').value,
     commission: parseInt(document.getElementById('barber-commission').value)||40,
@@ -1377,7 +1381,16 @@ function applyIdentity() {
 function updateShopLink() {
   const linkEl = document.getElementById('shop-link');
   if (linkEl && DB.shop && DB.shop.slug) {
-    const url = `${window.location.origin}/s/${DB.shop.slug}`;
+    let url = `${window.location.origin}/s/${DB.shop.slug}`;
+    
+    // Se for barbeiro logado, personalizar o link dele
+    if (DB.user && DB.user.role === 'barber') {
+      const b = DB.barbers.find(x => String(x.user_id) === String(DB.user.id) || String(x.id) === String(DB.user.barberId));
+      if (b) {
+        url += `?barber=${b.slug || b.id}`;
+      }
+    }
+    
     linkEl.textContent = url.replace('http://', '').replace('https://', '');
     linkEl.setAttribute('data-url', url);
   }

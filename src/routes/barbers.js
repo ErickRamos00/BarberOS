@@ -79,15 +79,16 @@ router.post('/', async (req, res) => {
     const start_time = req.body.start_time || req.body.start || '09:00';
     const end_time = req.body.end_time || req.body.end || '19:00';
     const working_days = req.body.working_days || req.body.days || [];
+    const slug = req.body.slug || (nickname || name).toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
 
     // Gerar código de acesso aleatório de 6 dígitos
     const accessCode = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedCode = await bcrypt.hash(accessCode, 10);
 
     const result = await run(
-      `INSERT INTO barbers (user_id, name, nickname, email, phone, commission, color, start_time, end_time, access_code)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [req.userId, name, nickname, email, phone, commission || 40, color || '#C0392B', start_time, end_time, hashedCode]
+      `INSERT INTO barbers (user_id, name, nickname, email, phone, commission, color, start_time, end_time, access_code, slug)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [req.userId, name, nickname, email, phone, commission || 40, color || '#C0392B', start_time, end_time, hashedCode, slug]
     );
 
     const barberId = result.lastID;
@@ -147,11 +148,12 @@ router.put('/:id', async (req, res) => {
     const start_time = req.body.start_time || req.body.start || '09:00';
     const end_time = req.body.end_time || req.body.end || '19:00';
     const working_days = req.body.working_days || req.body.days || [];
+    const slug = req.body.slug || (nickname || name).toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
 
     await run(
-      `UPDATE barbers SET name = ?, nickname = ?, email = ?, phone = ?, commission = ?, color = ?, start_time = ?, end_time = ?
+      `UPDATE barbers SET name = ?, nickname = ?, email = ?, phone = ?, commission = ?, color = ?, start_time = ?, end_time = ?, slug = ?
        WHERE id = ? AND user_id = ?`,
-      [name, nickname, email, phone, commission, color, start_time, end_time, req.params.id, req.userId]
+      [name, nickname, email, phone, commission, color, start_time, end_time, slug, req.params.id, req.userId]
     );
 
     // Deletar e re-adicionar especialidades
